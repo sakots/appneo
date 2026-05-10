@@ -118,13 +118,8 @@
     };
   };
 
-  const getBoardPath = () => {
-    const match = location.pathname.match(/^\/([^/]+)\//);
-    return match ? "/" + match[1] + "/" : "/";
-  };
-
   const getBoardUrl = (filename, query = "") => {
-    return getBoardPath() + filename + query;
+    return filename + query;
   };
 
   const parsePaletteName = (entry, index) => {
