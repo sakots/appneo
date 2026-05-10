@@ -307,7 +307,7 @@
       if (!document.paintbbs || !this.select) return;
 
       const colors = String(await document.paintbbs.getColors());
-      const name = prompt("パレット名", `パレット ${++this.customP}`);
+      const name = prompt("Palette name", "Palette " + ++this.customP);
       if (!name) {
         this.customP--;
         return;
@@ -328,7 +328,7 @@
     PaletteDel() {
       if (!this.select || this.select.selectedIndex <= 0) return;
       const index = this.select.selectedIndex;
-      if (!confirm(`「${this.select.options[index].text}」を削除してよろしいですか？`)) return;
+      if (!confirm(this.select.options[index].text + " delete?")) return;
       this.select.options[index] = null;
       this.Palettes.splice(index, 1);
       this.select.size = Math.min(this.select.length, 30);
