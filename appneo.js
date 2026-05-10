@@ -655,6 +655,7 @@
       </style>
       <div class="appneo-container">
         <div class="appneo-stage" id="appneo-appletdummy">
+          <div id="appneo-status" style="margin:8px 0;color:#800;font-weight:bold;">PaintBBS NEO を読み込み中...</div>
           <applet-dummy name="paintbbs" width="${sizes.appletWidth}" height="${sizes.appletHeight}">
             <param name="image_width" value="${sizes.canvasWidth}">
             <param name="image_height" value="${sizes.canvasHeight}">
@@ -673,10 +674,13 @@
     return root;
   };
 
+  const setStatus = (message) => {
+    const status = document.getElementById("appneo-status");
+    if (status) status.textContent = message;
+  };
+
   const startNeo = async (button, options = {}) => {
     const sizes = getSizes(button);
-
-    await ensureNeo();
     removeCurrentNeo();
 
     const root = createApplet(sizes);
@@ -690,18 +694,25 @@
       document.body.insertBefore(root, document.body.firstChild);
     }
 
+    setStatus("PaintBBS NEO のファイルを読み込み中...");
+    await ensureNeo();
+    setStatus("PaintBBS NEO を初期化中...");
+
     if (window.Neo && Neo.init()) {
       Neo.start();
       state.fitManager = new AppNeoFitManager(sizes);
       state.paletteManager = new AppNeoPaletteManager();
       state.paletteManager.GetPalette();
+      setStatus("");
       root.scrollIntoView({ block: "start", behavior: "smooth" });
     } else {
-      root.textContent = "PaintBBS NEO の起動に失敗しました。";
+      setStatus("PaintBBS NEO の起動に失敗しました。");
     }
   };
 
   const bind = () => {
+    window.appneoStart = () => startNeo(null, { replacePage: true });
+
     if (
       !/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm(?:[?#].*)?$/.test(location.href) &&
       !isFutabaPhp()
