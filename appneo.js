@@ -695,7 +695,7 @@
   };
 
   const bind = () => {
-    if (!/^https:\/\/www\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm$/.test(location.href)) {
+    if (!/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm$/.test(location.href)) {
       return;
     }
 
