@@ -59,7 +59,13 @@
   };
 
   const APP_BASE = window.APPNEO_BASE || getScriptBase();
-  const NEO_BASE = new URL("neo/dist/", APP_BASE).href;
+  const NEO_BASES = window.APPNEO_NEO_BASE
+    ? [window.APPNEO_NEO_BASE]
+    : [
+        new URL("neo/dist/", APP_BASE).href,
+        new URL("dist/", APP_BASE).href,
+        APP_BASE,
+      ];
 
   const toNumber = (value, fallback) => {
     const number = parseInt(value, 10);
@@ -110,10 +116,6 @@
       canvasWidth: width,
       canvasHeight: height,
     };
-  };
-
-  const isFutabaPhp = () => {
-    return /^https:\/\/.*\.2chan\.net\/[^/?#]+\/futaba\.php(?:[?#].*)?$/.test(location.href);
   };
 
   const parsePaletteName = (entry, index) => {
@@ -474,7 +476,10 @@
       link.rel = "stylesheet";
       link.href = href;
       link.onload = resolve;
-      link.onerror = reject;
+      link.onerror = () => {
+        link.remove();
+        reject(new Error("Failed to load " + href));
+      };
       document.head.appendChild(link);
     });
   };
@@ -495,17 +500,34 @@
       script.src = src;
       script.charset = "UTF-8";
       script.onload = resolve;
-      script.onerror = reject;
+      script.onerror = () => {
+        script.remove();
+        reject(new Error("Failed to load " + src));
+      };
       document.head.appendChild(script);
     });
   };
 
+  const loadNeoFrom = async (base) => {
+    await loadStyle(new URL("neo.css", base).href);
+    await loadScript(new URL("neo.js", base).href);
+    if (!window.Neo) throw new Error("Neo was not defined by " + base + "neo.js");
+  };
+
   const ensureNeo = () => {
     if (!state.loading) {
-      state.loading = Promise.all([
-        loadStyle(new URL("neo.css", NEO_BASE).href),
-        loadScript(new URL("neo.js", NEO_BASE).href),
-      ]);
+      state.loading = (async () => {
+        const errors = [];
+        for (const base of NEO_BASES) {
+          try {
+            await loadNeoFrom(base);
+            return;
+          } catch (error) {
+            errors.push(base + " : " + (error && error.message ? error.message : error));
+          }
+        }
+        throw new Error("Could not load neo.js/neo.css.\n" + errors.join("\n"));
+      })();
     }
     return state.loading;
   };
@@ -683,11 +705,8 @@
     removeCurrentNeo();
 
     const root = createApplet(sizes);
-    const anchor = !options.replacePage && button ? button.closest("form, table, center") : null;
-    if (options.replacePage) {
-      document.body.innerHTML = "";
-      document.body.appendChild(root);
-    } else if (anchor) {
+    const anchor = button ? button.closest("form, table, center") : null;
+    if (anchor) {
       anchor.insertAdjacentElement("afterend", root);
     } else {
       document.body.insertBefore(root, document.body.firstChild);
@@ -710,20 +729,9 @@
   };
 
   const bind = () => {
-    window.appneoStart = () => startNeo(null, { replacePage: true });
+    window.appneoStart = () => startNeo(findOekakiButton());
 
-    if (
-      !/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm(?:[?#].*)?$/.test(location.href) &&
-      !isFutabaPhp()
-    ) {
-      return;
-    }
-
-    if (isFutabaPhp()) {
-      startNeo(null, { replacePage: true }).catch((error) => {
-        console.error(error);
-        alert("Failed to load PaintBBS NEO.\n" + error);
-      });
+    if (!/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm(?:[?#].*)?$/.test(location.href)) {
       return;
     }
 
