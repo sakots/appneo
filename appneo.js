@@ -118,6 +118,15 @@
     };
   };
 
+  const getBoardPath = () => {
+    const match = location.pathname.match(/^\/([^/]+)\//);
+    return match ? "/" + match[1] + "/" : "/";
+  };
+
+  const getBoardUrl = (filename, query = "") => {
+    return getBoardPath() + filename + query;
+  };
+
   const parsePaletteName = (entry, index) => {
     const match = String(entry).match(/^\s*([^,\n]+)/);
     return match ? match[1].trim() : `Palette ${index + 1}`;
@@ -686,6 +695,8 @@
             <param name="neo_disable_turn_original_glitch" value="true">
             <param name="neo_enable_zoom_out" value="true">
             <param name="neo_emulation_mode" value="2.04">
+            <param name="url_save" value="${getBoardUrl("paintpost.php")}">
+            <param name="url_exit" value="${getBoardUrl("futaba.php", "?mode=paintcom")}">
           </applet-dummy>
         </div>
         ${createPalettePanel()}
