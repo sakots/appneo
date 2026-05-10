@@ -7,7 +7,7 @@
 ブックマークレットとして以下を実行したのち、お絵かきボタンを押してください
 
 ```js
-javascript:(()=>{window.APPNEO_BASE='https://neo.sakots.net/';const s=document.createElement('script');s.src=window.APPNEO_BASE+'appneo.js?'+Date.now();document.head.appendChild(s);})();
+javascript:(()=>{window.APPNEO_BASE='http://neo.sakots.net/';const s=document.createElement('script');s.src=window.APPNEO_BASE+'appneo.js?'+Date.now();document.head.appendChild(s);})();
 ```
 
 ## 履歴
