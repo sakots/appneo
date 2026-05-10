@@ -1,6 +1,5 @@
 // appneo.js
-// futaba.htm の「お絵かきする」ボタンから、このワークスペースの neo/dist を使って
-// PaintBBS NEO をページ内起動するための補助スクリプトです。
+// Starts PaintBBS NEO from a futaba drawing page.
 (() => {
   "use strict";
 
@@ -16,35 +15,35 @@
   };
 
   const DEFAULT_PALETTES = [
-    "No.01 赤  , FFDFDF,FFBFBF,FF9F9F,FF7F7F,FF5F5F,FF3F3F,FF0000,DF0000,BF0000,9F0000,7F0000,5F0000,FF1F1F,3F0000",
-    "No.02 鳶  , FFE7DF,FFCFBF,FFB79F,FF9F7F,FF875F,FF6F3F,FF3F00,DF3700,BF2F00,9F2700,7F1F00,5F1700,FF571F,3F0F00",
-    "No.03 山吹, FFEFDF,FFDFBF,FFCF9F,FFBF7F,FFAF5F,FF9F3F,FF7F00,DF6F00,BF5F00,9F4F00,7F3F00,5F2F00,FF8F1F,3F1F00",
-    "No.04 黄金, FFF7DF,FFEFBF,FFE79F,FFDF7F,FFD75F,FFCF3F,FFBF00,DFA700,BF8F00,9F7700,7F5F00,5F4700,FFC71F,3F2F00",
-    "No.05 黄  , FFFFDF,FFFFBF,FFFF9F,FFFF7F,FFFF5F,FFFF3F,FFFF00,DFDF00,BFBF00,9F9F00,7F7F00,5F5F00,FFFF1F,3F3F00",
-    "No.06 若芽, F7FFDF,EFFFBF,E7FF9F,DFFF7F,D7FF5F,CFFF3F,BFFF00,A7DF00,8FBF00,779F00,5F7F00,475F00,C7FF1F,2F3F00",
-    "No.07 萌黄, EFFFDF,DFFFBF,CFFF9F,BFFF7F,AFFF5F,9FFF3F,7FFF00,6FDF00,5FBF00,4F9F00,3F7F00,2F5F00,8FFF1F,1F3F00",
-    "No.08 若葉, E7FFDF,CFFFBF,B7FF9F,9FFF7F,87FF5F,6FFF3F,3FFF00,37DF00,3FBF00,279F00,1F7F00,175F00,57FF1F,0F3F00",
-    "No.09 緑  , DFFFDF,BFFFBF,9FFF9F,7FFF7F,5FFF5F,3FFF3F,00FF00,00DF00,00BF00,009F00,007F00,005F00,1FFF1F,003F00",
-    "No.10 青磁, DFFFE7,BFFFCF,9FFFB7,7FFF9F,5FFF87,3FFF6F,00FF3F,00DF37,00BF3F,009F27,007F1F,005F17,1FFF57,003F0F",
-    "No.11 常磐, DFFFEF,BFFFDF,9FFFCF,7FFFBF,5FFFAF,3FFF9F,00FF7F,00DF6F,00BF5F,009F4F,007F3F,005F2F,1FFF8F,003F1F",
-    "No.12 浅葱, DFFFF7,BFFFEF,9FFFE7,7FFFDF,5FFFD7,3FFFCF,00FFBF,00DFA7,00BF8F,009F77,007F5F,005F47,1FFFC7,003F2F",
-    "No.13 水  , DFFFFF,BFFFFF,9FFFFF,7FFFFF,5FFFFF,3FFFFF,00FFFF,00DFDF,00BFBF,009F9F,007F7F,005F5F,1FFFFF,003F3F",
-    "No.14 空  , DFF7FF,BFEFFF,9FE7FF,7FDFFF,5FD7FF,3FCFFF,00BFFF,00A7DF,008FBF,00779F,005F7F,00475F,1FC7FF,002F3F",
-    "No.15 海  , DFEFFF,BFDFFF,9FCFFF,7FBFFF,5FAFFF,3F9FFF,007FFF,006FDF,005FBF,004F9F,003F7F,002F5F,1F8FFF,001F3F",
-    "No.16 露草, DFE7FF,BFCFFF,9FB7FF,7F9FFF,5F87FF,3F6FFF,003FFF,0037DF,003FBF,00279F,001F7F,00175F,1F57FF,000F3F",
-    "No.17 青  , DFDFFF,BFBFFF,9F9FFF,7F7FFF,5F5FFF,3F3FFF,0000FF,0000DF,0000BF,00009F,00007F,00005F,1F1FFF,00003F",
-    "No.18 桔梗, E7DFFF,CFBFFF,B79FFF,9F7FFF,875FFF,6F3FFF,3F00FF,3700DF,3F00BF,27009F,1F007F,17005F,571FFF,0F003F",
-    "No.19 藤  , EFDFFF,DFBFFF,CF9FFF,BF7FFF,AF5FFF,9F3FFF,7F00FF,6F00DF,5F00BF,4F009F,3F007F,2F005F,8F1FFF,1F003F",
-    "No.20 葡萄, F7DFFF,EFBFFF,E79FFF,DF7FFF,D75FFF,CF3FFF,BF00FF,A700DF,8F00BF,77009F,5F007F,47005F,C71FFF,2F003F",
-    "No.21 紫  , FFDFFF,FFBFFF,FF9FFF,FF7FFF,FF5FFF,FF3FFF,FF00FF,DF00DF,BF00BF,9F009F,7F007F,5F005F,FF1FFF,3F003F",
-    "No.22 紫暗, FFDFF7,FFBFEF,FF9FE7,FF7FDF,FF5FD7,FF3FCF,FF00BF,DF00A7,BF008F,9F0077,7F005F,5F0047,FF1FC7,3F002F",
-    "No.23 梅紫, FFDFEF,FFBFDF,FF9FCF,FF7FBF,FF5FAF,FF3F9F,FF007F,DF006F,BF005F,9F004F,7F003F,5F002F,FF1F8F,3F001F",
-    "No.24 茜  , FFDFE7,FFBFCF,FF9FB7,FF7F9F,FF5F87,FF3F6F,FF003F,DF0037,BF003F,9F0027,7F001F,5F0017,FF1F57,3F000F",
-    "No.25 白黒, F0F0F0,E0E0E0,D0D0D0,C0C0C0,B0B0B0,A0A0A0,808080,707070,606060,505050,404040,303030,909090,202020",
-    "No.26 肌  , FFF2E1,FFEED7,FFE9CD,FFE5C3,FFE1B9,FFDCAF,FFEDE1,FFE7D7,FFE1CD,FFDBC3,FFD5B9,FFCFAF,FFD8A5,FFC9A5",
-    "No.27 褐  , ECDBCC,E2C6AE,D7B291,CD9D73,C18957,AE7542,916137,744E2C,573A21,3A2716,1D130D,120800,FCECE2,F9DDCF",
-    "No.28 淡  , FFC3C3,FDFFC3,C3FFC7,C3F9FF,CBC3FF,FFC3F4,FFE2C3,DEFFC3,C3FFE6,C3DAFF,EBC3FF,FFC3D5,FCECE2,F9DDCF",
-    "No.29 標準, 000000,B47575,FA9696,FFB6FF,25C7C9,E7962D,FFFFFF,888888,C096C0,8080FF,E7E58D,99CB7B,FCECE2,F9DDCF",
+    "No.01 Red, FFDFDF,FFBFBF,FF9F9F,FF7F7F,FF5F5F,FF3F3F,FF0000,DF0000,BF0000,9F0000,7F0000,5F0000,FF1F1F,3F0000",
+    "No.02 Tobi, FFE7DF,FFCFBF,FFB79F,FF9F7F,FF875F,FF6F3F,FF3F00,DF3700,BF2F00,9F2700,7F1F00,5F1700,FF571F,3F0F00",
+    "No.03 Yamabuki, FFEFDF,FFDFBF,FFCF9F,FFBF7F,FFAF5F,FF9F3F,FF7F00,DF6F00,BF5F00,9F4F00,7F3F00,5F2F00,FF8F1F,3F1F00",
+    "No.04 Gold, FFF7DF,FFEFBF,FFE79F,FFDF7F,FFD75F,FFCF3F,FFBF00,DFA700,BF8F00,9F7700,7F5F00,5F4700,FFC71F,3F2F00",
+    "No.05 Yellow, FFFFDF,FFFFBF,FFFF9F,FFFF7F,FFFF5F,FFFF3F,FFFF00,DFDF00,BFBF00,9F9F00,7F7F00,5F5F00,FFFF1F,3F3F00",
+    "No.06 Wakame, F7FFDF,EFFFBF,E7FF9F,DFFF7F,D7FF5F,CFFF3F,BFFF00,A7DF00,8FBF00,779F00,5F7F00,475F00,C7FF1F,2F3F00",
+    "No.07 Moegi, EFFFDF,DFFFBF,CFFF9F,BFFF7F,AFFF5F,9FFF3F,7FFF00,6FDF00,5FBF00,4F9F00,3F7F00,2F5F00,8FFF1F,1F3F00",
+    "No.08 Wakaba, E7FFDF,CFFFBF,B7FF9F,9FFF7F,87FF5F,6FFF3F,3FFF00,37DF00,3FBF00,279F00,1F7F00,175F00,57FF1F,0F3F00",
+    "No.09 Green, DFFFDF,BFFFBF,9FFF9F,7FFF7F,5FFF5F,3FFF3F,00FF00,00DF00,00BF00,009F00,007F00,005F00,1FFF1F,003F00",
+    "No.10 Seiji, DFFFE7,BFFFCF,9FFFB7,7FFF9F,5FFF87,3FFF6F,00FF3F,00DF37,00BF3F,009F27,007F1F,005F17,1FFF57,003F0F",
+    "No.11 Tokiwa, DFFFEF,BFFFDF,9FFFCF,7FFFBF,5FFFAF,3FFF9F,00FF7F,00DF6F,00BF5F,009F4F,007F3F,005F2F,1FFF8F,003F1F",
+    "No.12 Asagi, DFFFF7,BFFFEF,9FFFE7,7FFFDF,5FFFD7,3FFFCF,00FFBF,00DFA7,00BF8F,009F77,007F5F,005F47,1FFFC7,003F2F",
+    "No.13 Aqua, DFFFFF,BFFFFF,9FFFFF,7FFFFF,5FFFFF,3FFFFF,00FFFF,00DFDF,00BFBF,009F9F,007F7F,005F5F,1FFFFF,003F3F",
+    "No.14 Sky, DFF7FF,BFEFFF,9FE7FF,7FDFFF,5FD7FF,3FCFFF,00BFFF,00A7DF,008FBF,00779F,005F7F,00475F,1FC7FF,002F3F",
+    "No.15 Sea, DFEFFF,BFDFFF,9FCFFF,7FBFFF,5FAFFF,3F9FFF,007FFF,006FDF,005FBF,004F9F,003F7F,002F5F,1F8FFF,001F3F",
+    "No.16 Bluegrass, DFE7FF,BFCFFF,9FB7FF,7F9FFF,5F87FF,3F6FFF,003FFF,0037DF,003FBF,00279F,001F7F,00175F,1F57FF,000F3F",
+    "No.17 Blue, DFDFFF,BFBFFF,9F9FFF,7F7FFF,5F5FFF,3F3FFF,0000FF,0000DF,0000BF,00009F,00007F,00005F,1F1FFF,00003F",
+    "No.18 Kikyo, E7DFFF,CFBFFF,B79FFF,9F7FFF,875FFF,6F3FFF,3F00FF,3700DF,3F00BF,27009F,1F007F,17005F,571FFF,0F003F",
+    "No.19 Fuji, EFDFFF,DFBFFF,CF9FFF,BF7FFF,AF5FFF,9F3FFF,7F00FF,6F00DF,5F00BF,4F009F,3F007F,2F005F,8F1FFF,1F003F",
+    "No.20 Grape, F7DFFF,EFBFFF,E79FFF,DF7FFF,D75FFF,CF3FFF,BF00FF,A700DF,8F00BF,77009F,5F007F,47005F,C71FFF,2F003F",
+    "No.21 Purple, FFDFFF,FFBFFF,FF9FFF,FF7FFF,FF5FFF,FF3FFF,FF00FF,DF00DF,BF00BF,9F009F,7F007F,5F005F,FF1FFF,3F003F",
+    "No.22 Dark Purple, FFDFF7,FFBFEF,FF9FE7,FF7FDF,FF5FD7,FF3FCF,FF00BF,DF00A7,BF008F,9F0077,7F005F,5F0047,FF1FC7,3F002F",
+    "No.23 Plum, FFDFEF,FFBFDF,FF9FCF,FF7FBF,FF5FAF,FF3F9F,FF007F,DF006F,BF005F,9F004F,7F003F,5F002F,FF1F8F,3F001F",
+    "No.24 Madder, FFDFE7,FFBFCF,FF9FB7,FF7F9F,FF5F87,FF3F6F,FF003F,DF0037,BF003F,9F0027,7F001F,5F0017,FF1F57,3F000F",
+    "No.25 Mono, F0F0F0,E0E0E0,D0D0D0,C0C0C0,B0B0B0,A0A0A0,808080,707070,606060,505050,404040,303030,909090,202020",
+    "No.26 Skin, FFF2E1,FFEED7,FFE9CD,FFE5C3,FFE1B9,FFDCAF,FFEDE1,FFE7D7,FFE1CD,FFDBC3,FFD5B9,FFCFAF,FFD8A5,FFC9A5",
+    "No.27 Brown, ECDBCC,E2C6AE,D7B291,CD9D73,C18957,AE7542,916137,744E2C,573A21,3A2716,1D130D,120800,FCECE2,F9DDCF",
+    "No.28 Pale, FFC3C3,FDFFC3,C3FFC7,C3F9FF,CBC3FF,FFC3F4,FFE2C3,DEFFC3,C3FFE6,C3DAFF,EBC3FF,FFC3D5,FCECE2,F9DDCF",
+    "No.29 Standard, 000000,B47575,FA9696,FFB6FF,25C7C9,E7962D,FFFFFF,888888,C096C0,8080FF,E7E58D,99CB7B,FCECE2,F9DDCF",
   ];
 
   const getScriptBase = () => {
@@ -71,7 +70,7 @@
     const controls = [...document.querySelectorAll("input, button, a")];
     return controls.find((control) => {
       const label = control.value || control.textContent || control.title || "";
-      return /お絵(?:か|描)きする/.test(label);
+      return /\u304a\u7d75(?:\u304b|\u63cf)\u304d\u3059\u308b/.test(label);
     });
   };
 
@@ -387,7 +386,7 @@
         .filter((entry) => entry.colors);
 
       if (!entries.length) {
-        alert("マトリクス情報がありません。");
+        alert("No matrix data.");
         return;
       }
 
@@ -413,7 +412,7 @@
     }
 
     PaletteMatrixHelp() {
-      alert("PALETTE MATRIX\n!パレット名 の次の行から14色の #RRGGBB を並べてください。\nGETで現在のパレット情報を取得し、SETで反映できます。");
+      alert("PALETTE MATRIX\nPut !PaletteName followed by 14 #RRGGBB colors.\nGET exports palettes, SET imports them.");
     }
 
     async GetPalette() {
@@ -551,9 +550,9 @@
           </fieldset>
           <fieldset>
             <legend>TOOL</legend>
-            <input class="appneo-button" type="button" value="左" onclick="Neo.setToolSide(true)">
-            <input class="appneo-button" type="button" value="右" onclick="Neo.setToolSide(false)">
-            手ぶれ
+            <input class="appneo-button" type="button" value="Left" onclick="Neo.setToolSide(true)">
+            <input class="appneo-button" type="button" value="Right" onclick="Neo.setToolSide(false)">
+            Stabilizer
             <select onchange="Neo.setStabilizeLevel(this.value)">
               <option value="0">0</option>
               <option value="1" selected>1</option>
@@ -566,22 +565,22 @@
           <fieldset>
             <legend>PALETTE</legend>
             <select class="appneo-select" name="select" size="13" onchange="setPalette()">
-              <option>一時パレット</option>
+              <option>Temporary</option>
             </select><br>
-            <input class="appneo-button" type="button" value="一時保存" onclick="PaletteSave()"><br>
-            <input class="appneo-button" type="button" value="作成" onclick="PaletteNew()">
-            <input class="appneo-button" type="button" value="変更" onclick="PaletteRenew()">
-            <input class="appneo-button" type="button" value="削除" onclick="PaletteDel()"><br>
-            <input class="appneo-button" type="button" value="明＋" onclick="P_Effect(10)">
-            <input class="appneo-button" type="button" value="明－" onclick="P_Effect(-10)">
-            <input class="appneo-button" type="button" value="反転" onclick="P_Effect(255)">
+            <input class="appneo-button" type="button" value="Save" onclick="PaletteSave()"><br>
+            <input class="appneo-button" type="button" value="New" onclick="PaletteNew()">
+            <input class="appneo-button" type="button" value="Update" onclick="PaletteRenew()">
+            <input class="appneo-button" type="button" value="Delete" onclick="PaletteDel()"><br>
+            <input class="appneo-button" type="button" value="Light+" onclick="P_Effect(10)">
+            <input class="appneo-button" type="button" value="Light-" onclick="P_Effect(-10)">
+            <input class="appneo-button" type="button" value="Invert" onclick="P_Effect(255)">
           </fieldset>
           <fieldset>
             <legend>MATRIX</legend>
             <select class="appneo-select" name="m_m">
-              <option value="0">全体</option>
-              <option value="1">現在</option>
-              <option value="2">追加</option>
+              <option value="0">All</option>
+              <option value="1">Current</option>
+              <option value="2">Append</option>
             </select>
             <input type="button" class="appneo-button" value="GET" onclick="PaletteMatrixGet()">
             <input type="button" class="appneo-button" value="SET" onclick="PaletteMatrixSet()">
@@ -655,7 +654,7 @@
       </style>
       <div class="appneo-container">
         <div class="appneo-stage" id="appneo-appletdummy">
-          <div id="appneo-status" style="margin:8px 0;color:#800;font-weight:bold;">PaintBBS NEO を読み込み中...</div>
+          <div id="appneo-status" style="margin:8px 0;color:#800;font-weight:bold;">Loading PaintBBS NEO...</div>
           <applet-dummy name="paintbbs" width="${sizes.appletWidth}" height="${sizes.appletHeight}">
             <param name="image_width" value="${sizes.canvasWidth}">
             <param name="image_height" value="${sizes.canvasHeight}">
@@ -694,9 +693,9 @@
       document.body.insertBefore(root, document.body.firstChild);
     }
 
-    setStatus("PaintBBS NEO のファイルを読み込み中...");
+    setStatus("Loading PaintBBS NEO files...");
     await ensureNeo();
-    setStatus("PaintBBS NEO を初期化中...");
+    setStatus("Initializing PaintBBS NEO...");
 
     if (window.Neo && Neo.init()) {
       Neo.start();
@@ -706,7 +705,7 @@
       setStatus("");
       root.scrollIntoView({ block: "start", behavior: "smooth" });
     } else {
-      setStatus("PaintBBS NEO の起動に失敗しました。");
+      setStatus("Failed to start PaintBBS NEO.");
     }
   };
 
@@ -723,7 +722,7 @@
     if (isFutabaPhp()) {
       startNeo(null, { replacePage: true }).catch((error) => {
         console.error(error);
-        alert("PaintBBS NEO の読み込みに失敗しました。\n" + error);
+        alert("Failed to load PaintBBS NEO.\n" + error);
       });
       return;
     }
@@ -739,7 +738,7 @@
         event.stopPropagation();
         startNeo(button).catch((error) => {
           console.error(error);
-          alert("PaintBBS NEO の読み込みに失敗しました。\n" + error);
+          alert("Failed to load PaintBBS NEO.\n" + error);
         });
       },
       true,
@@ -748,7 +747,7 @@
     if (window.APPNEO_AUTO_START === true) {
       startNeo(button).catch((error) => {
         console.error(error);
-        alert("PaintBBS NEO の読み込みに失敗しました。\n" + error);
+        alert("Failed to load PaintBBS NEO.\n" + error);
       });
     }
   };
