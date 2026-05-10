@@ -68,9 +68,9 @@
   };
 
   const findOekakiButton = () => {
-    const controls = [...document.querySelectorAll("input, button")];
+    const controls = [...document.querySelectorAll("input, button, a")];
     return controls.find((control) => {
-      const label = control.value || control.textContent || "";
+      const label = control.value || control.textContent || control.title || "";
       return /お絵(?:か|描)きする/.test(label);
     });
   };
@@ -111,6 +111,10 @@
       canvasWidth: width,
       canvasHeight: height,
     };
+  };
+
+  const isFutabaPhp = () => {
+    return /^https:\/\/.*\.2chan\.net\/[^/?#]+\/futaba\.php(?:[?#].*)?$/.test(location.href);
   };
 
   const parsePaletteName = (entry, index) => {
@@ -669,15 +673,18 @@
     return root;
   };
 
-  const startNeo = async (button) => {
+  const startNeo = async (button, options = {}) => {
     const sizes = getSizes(button);
 
     await ensureNeo();
     removeCurrentNeo();
 
     const root = createApplet(sizes);
-    const anchor = button ? button.closest("form, table, center") : null;
-    if (anchor) {
+    const anchor = !options.replacePage && button ? button.closest("form, table, center") : null;
+    if (options.replacePage) {
+      document.body.innerHTML = "";
+      document.body.appendChild(root);
+    } else if (anchor) {
       anchor.insertAdjacentElement("afterend", root);
     } else {
       document.body.insertBefore(root, document.body.firstChild);
@@ -695,7 +702,18 @@
   };
 
   const bind = () => {
-    if (!/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm$/.test(location.href)) {
+    if (
+      !/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm(?:[?#].*)?$/.test(location.href) &&
+      !isFutabaPhp()
+    ) {
+      return;
+    }
+
+    if (isFutabaPhp()) {
+      startNeo(null, { replacePage: true }).catch((error) => {
+        console.error(error);
+        alert("PaintBBS NEO の読み込みに失敗しました。\n" + error);
+      });
       return;
     }
 
@@ -715,6 +733,13 @@
       },
       true,
     );
+
+    if (window.APPNEO_AUTO_START === true) {
+      startNeo(button).catch((error) => {
+        console.error(error);
+        alert("PaintBBS NEO の読み込みに失敗しました。\n" + error);
+      });
+    }
   };
 
   if (document.readyState === "loading") {
