@@ -592,7 +592,7 @@
           </fieldset>
           <fieldset>
             <legend>PALETTE</legend>
-            <select class="appneo-select" name="select" size="13" onchange="setPalette()">
+            <select class="appneo-select select-palette" name="select" size="13" onchange="setPalette()">
               <option>Temporary</option>
             </select><br>
             <input class="appneo-button" type="button" value="Save" onclick="PaletteSave()"><br>
@@ -678,6 +678,10 @@
         #${APPNEO_ID} .appneo-credit {
           margin: 4px 0 0;
           font-size: 11px;
+        }
+        #${APPNEO_ID} .select-palette {
+          max-height: 300px;
+          overflow-y: scroll;
         }
       </style>
       <p>appneo ${APPNEO_VERSION}</p>
