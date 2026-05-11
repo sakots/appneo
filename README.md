@@ -6,12 +6,17 @@
 
 ブックマークレットとして以下を実行したのち、お絵かきボタンを押してください
 
-```js
-javascript:(()=>{window.APPNEO_BASE='https://neo.sakots.net/';const s=document.createElement('script');s.charset='UTF-8';s.src=window.APPNEO_BASE+'appneo.js?'+Date.now();document.head.appendChild(s);})();
+```javascript
+javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/appneo.js?'+Date.now();document.head.appendChild(s);})();
 ```
 
 ## 履歴
 
+### 2026/05/11 v0.1.1
+
+- バージョン情報記載
+- パレットリストの最大縦幅設定
+
 ### 2026/05/10
 
-リポジトリ生やした
+- リポジトリ生やした
