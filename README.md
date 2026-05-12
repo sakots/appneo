@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### 2026/05/12 v0.1.2
+
+- パレットの色修正
+
 ### 2026/05/11 v0.1.1
 
 - バージョン情報記載
