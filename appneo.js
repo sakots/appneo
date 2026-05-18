@@ -3,7 +3,7 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.2";
+  const APPNEO_VERSION = "v0.1.3";
 
   const APPNEO_ID = "appneo-root";
   const DEFAULT_APPLET_WIDTH = 400;
@@ -93,6 +93,17 @@
       const label = control.value || control.textContent || control.title || "";
       return /\u304a\u7d75(?:\u304b|\u63cf)\u304d\u3059\u308b/.test(label);
     });
+  };
+
+  const setOekakiButtonLabel = (button) => {
+    if (!button) return;
+
+    const label = "お絵かきする(APPNEO)";
+    if ("value" in button) {
+      button.value = label;
+    } else {
+      button.textContent = label;
+    }
   };
 
   const findSizeInputs = (button) => {
@@ -765,6 +776,7 @@
     if (!button || button.dataset.appneoBound === "true") return;
 
     button.dataset.appneoBound = "true";
+    setOekakiButtonLabel(button);
     button.addEventListener(
       "click",
       (event) => {
@@ -778,7 +790,7 @@
       true,
     );
 
-    if (window.APPNEO_AUTO_START === true) {
+    if (window.APPNEO_AUTO_START !== false) {
       startNeo(button).catch((error) => {
         console.error(error);
         alert("Failed to load PaintBBS NEO.\n" + error);
