@@ -4,7 +4,7 @@
 
 ## 使い方
 
-ブックマークレットとして以下を実行したのち、お絵かきボタンを押してください
+ブックマークレットとして以下を実行すると、お絵かきアプレットが読み込まれます。
 
 ```javascript
 javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/appneo.js?'+Date.now();document.head.appendChild(s);})();
@@ -12,15 +12,19 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
-### 2026/05/12 v0.1.2
+### [2026/05/19] v0.1.3
+
+- ブックマークレット読み込み時に自動でお絵かきアプレットを起動するようにした
+
+### [2026/05/12] v0.1.2
 
 - パレットの色修正
 
-### 2026/05/11 v0.1.1
+### [2026/05/11] v0.1.1
 
 - バージョン情報記載
 - パレットリストの最大縦幅設定
 
-### 2026/05/10
+### [2026/05/10]
 
 - リポジトリ生やした
