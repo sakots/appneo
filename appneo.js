@@ -144,11 +144,27 @@
     };
   };
 
-  const getBoardUrl = (filename, query = "") => {
-    return filename + query;
+  const getAbsoluteBoardUrl = (value, fallback) => {
+    return new URL(value || fallback, location.href).href;
   };
 
-  const createPaintBbsParams = (sizes) => {
+  const getBoardParam = (name, fallback) => {
+    const params = [...document.querySelectorAll("param[name]")];
+    const param = params.find((item) => {
+      return item.getAttribute("name").toLowerCase() === name;
+    });
+
+    return getAbsoluteBoardUrl(param && param.getAttribute("value"), fallback);
+  };
+
+  const getBoardParams = () => {
+    return {
+      url_save: getBoardParam("url_save", "paintpost.php"),
+      url_exit: getBoardParam("url_exit", "futaba.php?mode=paintcom"),
+    };
+  };
+
+  const createPaintBbsParams = (sizes, boardParams) => {
     return {
       neo_max_pch: 2048,
       neo_send_with_formdata: true,
@@ -166,13 +182,13 @@
       image_height: sizes.canvasHeight,
       thumbnail_width: "100%",
       thumbnail_height: "100%",
-      url_save: getBoardUrl("paintpost.php"),
-      url_exit: getBoardUrl("futaba.php", "?mode=paintcom"),
+      url_save: boardParams.url_save,
+      url_exit: boardParams.url_exit,
       thumbnail_type: "animation",
     };
   };
 
-  const configureNeoParams = (sizes) => {
+  const configureNeoParams = (sizes, boardParams) => {
     const singular = Neo.param && typeof Neo.param === "object" ? Neo.param : {};
     const plural = Neo.params && typeof Neo.params === "object" ? Neo.params : {};
     const existingPaintBbs = {
@@ -180,10 +196,12 @@
       ...(plural.paintbbs || {}),
     };
     const params = {
-      ...createPaintBbsParams(sizes),
+      ...createPaintBbsParams(sizes, boardParams),
       ...existingPaintBbs,
       image_width: sizes.canvasWidth,
       image_height: sizes.canvasHeight,
+      url_save: getAbsoluteBoardUrl(existingPaintBbs.url_save, boardParams.url_save),
+      url_exit: getAbsoluteBoardUrl(existingPaintBbs.url_exit, boardParams.url_exit),
     };
 
     Neo.param = {
@@ -774,6 +792,7 @@
 
   const startNeo = async (button, options = {}) => {
     const sizes = getSizes(button);
+    const boardParams = getBoardParams();
     removeCurrentNeo();
 
     const root = createApplet(sizes);
@@ -787,7 +806,7 @@
     setStatus("Loading PaintBBS NEO files...");
     await ensureNeo();
     setStatus("Initializing PaintBBS NEO...");
-    configureNeoParams(sizes);
+    configureNeoParams(sizes, boardParams);
 
     if (window.Neo && Neo.init()) {
       Neo.start();

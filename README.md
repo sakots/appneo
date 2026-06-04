@@ -15,6 +15,7 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 ### [2026/06/04] v0.1.4
 
 - `div.neo-applet-paintbbs` と `Neo.param.paintbbs` による新しい起動設定に対応
+- 掲示板の `url_save` と `url_exit` を絶対URLに変換
 
 ### [2026/05/19] v0.1.3
 
