@@ -167,7 +167,6 @@
   const createPaintBbsParams = (sizes, boardParams) => {
     return {
       neo_max_pch: 2048,
-      neo_send_with_formdata: true,
       neo_confirm_layer_info_notsaved: true,
       neo_confirm_unload: true,
       neo_show_right_button: true,
@@ -175,15 +174,15 @@
       neo_disable_grid_touch_move: true,
       neo_enable_zoom_out: true,
       neo_disable_turn_original_glitch: true,
-      send_header_count: true,
-      send_header_timer: true,
       image_width: sizes.canvasWidth,
       image_height: sizes.canvasHeight,
       thumbnail_width: "100%",
       thumbnail_height: "100%",
       url_save: boardParams.url_save,
       url_exit: boardParams.url_exit,
-      thumbnail_type: "animation",
+      poo: false,
+      send_advance: true,
+      tool_advance: true,
     };
   };
 
