@@ -3,7 +3,7 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.3";
+  const APPNEO_VERSION = "v0.1.4";
 
   const APPNEO_ID = "appneo-root";
   const DEFAULT_APPLET_WIDTH = 400;
@@ -146,6 +146,52 @@
 
   const getBoardUrl = (filename, query = "") => {
     return filename + query;
+  };
+
+  const createPaintBbsParams = (sizes) => {
+    return {
+      neo_max_pch: 2048,
+      neo_send_with_formdata: true,
+      neo_validate_exact_ok_text_in_response: true,
+      neo_confirm_layer_info_notsaved: true,
+      neo_confirm_unload: true,
+      neo_show_right_button: true,
+      neo_animation_skip: true,
+      neo_disable_grid_touch_move: true,
+      neo_enable_zoom_out: true,
+      neo_disable_turn_original_glitch: true,
+      send_header_count: true,
+      send_header_timer: true,
+      image_width: sizes.canvasWidth,
+      image_height: sizes.canvasHeight,
+      thumbnail_width: "100%",
+      thumbnail_height: "100%",
+      url_save: getBoardUrl("paintpost.php"),
+      url_exit: getBoardUrl("futaba.php", "?mode=paintcom"),
+      thumbnail_type: "animation",
+    };
+  };
+
+  const configureNeoParams = (sizes) => {
+    const singular = Neo.param && typeof Neo.param === "object" ? Neo.param : {};
+    const plural = Neo.params && typeof Neo.params === "object" ? Neo.params : {};
+    const existingPaintBbs = {
+      ...(singular.paintbbs || {}),
+      ...(plural.paintbbs || {}),
+    };
+    const params = {
+      ...createPaintBbsParams(sizes),
+      ...existingPaintBbs,
+      image_width: sizes.canvasWidth,
+      image_height: sizes.canvasHeight,
+    };
+
+    Neo.param = {
+      ...singular,
+      ...plural,
+      paintbbs: params,
+    };
+    Neo.params = Neo.param;
   };
 
   const parsePaletteName = (entry, index) => {
@@ -710,20 +756,9 @@
       </style>
       <p>appneo ${APPNEO_VERSION}</p>
       <div class="appneo-container">
-        <div class="appneo-stage" id="appneo-appletdummy">
+        <div class="appneo-stage" id="appneo-applet">
           <div id="appneo-status" style="margin:8px 0;color:#800;font-weight:bold;">Loading PaintBBS NEO...</div>
-          <applet-dummy name="paintbbs" width="${sizes.appletWidth}" height="${sizes.appletHeight}">
-            <param name="image_width" value="${sizes.canvasWidth}">
-            <param name="image_height" value="${sizes.canvasHeight}">
-            <param name="thumbnail_type" value="animation">
-            <param name="neo_show_right_button" value="true">
-            <param name="neo_disable_grid_touch_move" value="true">
-            <param name="neo_disable_turn_original_glitch" value="true">
-            <param name="neo_enable_zoom_out" value="true">
-            <param name="neo_emulation_mode" value="2.04">
-            <param name="url_save" value="${getBoardUrl("paintpost.php")}">
-            <param name="url_exit" value="${getBoardUrl("futaba.php", "?mode=paintcom")}">
-          </applet-dummy>
+          <div class="neo-applet-paintbbs" data-width="${sizes.appletWidth}" data-height="${sizes.appletHeight}"></div>
         </div>
         ${createPalettePanel()}
       </div>
@@ -752,6 +787,7 @@
     setStatus("Loading PaintBBS NEO files...");
     await ensureNeo();
     setStatus("Initializing PaintBBS NEO...");
+    configureNeoParams(sizes);
 
     if (window.Neo && Neo.init()) {
       Neo.start();

@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/06/04] v0.1.4
+
+- `div.neo-applet-paintbbs` と `Neo.param.paintbbs` による新しい起動設定に対応
+
 ### [2026/05/19] v0.1.3
 
 - ブックマークレット読み込み時に自動でお絵かきアプレットを起動するようにした
