@@ -3,7 +3,7 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.4";
+  const APPNEO_VERSION = "v0.1.5";
 
   const APPNEO_ID = "appneo-root";
   const DEFAULT_APPLET_WIDTH = 400;
@@ -168,7 +168,6 @@
     return {
       neo_max_pch: 2048,
       neo_send_with_formdata: true,
-      neo_validate_exact_ok_text_in_response: true,
       neo_confirm_layer_info_notsaved: true,
       neo_confirm_unload: true,
       neo_show_right_button: true,
@@ -200,6 +199,7 @@
       ...existingPaintBbs,
       image_width: sizes.canvasWidth,
       image_height: sizes.canvasHeight,
+      neo_validate_exact_ok_text_in_response: false,
       url_save: getAbsoluteBoardUrl(existingPaintBbs.url_save, boardParams.url_save),
       url_exit: getAbsoluteBoardUrl(existingPaintBbs.url_exit, boardParams.url_exit),
     };

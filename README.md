@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/06/04] v0.1.5
+
+- ふたばの投稿成功レスポンスをエラーとして扱ってしまう問題を修正
+
 ### [2026/06/04] v0.1.4
 
 - `div.neo-applet-paintbbs` と `Neo.param.paintbbs` による新しい起動設定に対応
