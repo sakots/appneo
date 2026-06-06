@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/06/07] v0.1.6
+
+- `neo.js` と `neo.css` の読み込みURLにもキャッシュ回避パラメータを付与
+
 ### [2026/06/04] v0.1.5
 
 - ふたばの投稿成功レスポンスをエラーとして扱ってしまう問題を修正
