@@ -3,7 +3,8 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.5";
+  const APPNEO_VERSION = "v0.1.6";
+  const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
   const DEFAULT_APPLET_WIDTH = 400;
@@ -81,6 +82,12 @@
         new URL("dist/", APP_BASE).href,
         APP_BASE,
       ];
+
+  const withCacheBust = (url) => {
+    const next = new URL(url, location.href);
+    next.searchParams.set("appneo", APPNEO_CACHE_BUST);
+    return next.href;
+  };
 
   const toNumber = (value, fallback) => {
     const number = parseInt(value, 10);
@@ -602,8 +609,8 @@
   };
 
   const loadNeoFrom = async (base) => {
-    await loadStyle(new URL("neo.css", base).href);
-    await loadScript(new URL("neo.js", base).href);
+    await loadStyle(withCacheBust(new URL("neo.css", base).href));
+    await loadScript(withCacheBust(new URL("neo.js", base).href));
     if (!window.Neo) throw new Error("Neo was not defined by " + base + "neo.js");
   };
 
