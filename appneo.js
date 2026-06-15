@@ -3,7 +3,7 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.6";
+  const APPNEO_VERSION = "v0.1.7";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
@@ -174,7 +174,7 @@
   const createPaintBbsParams = (sizes, boardParams) => {
     return {
       neo_max_pch: 2048,
-      neo_confirm_layer_info_notsaved: true,
+      neo_confirm_layer_info_notsaved: false,
       neo_confirm_unload: true,
       neo_show_right_button: true,
       neo_animation_skip: true,
@@ -187,7 +187,6 @@
       thumbnail_height: "100%",
       url_save: boardParams.url_save,
       url_exit: boardParams.url_exit,
-      poo: false,
       send_advance: true,
       tool_advance: true,
     };

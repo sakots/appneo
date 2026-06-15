@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/06/15] v0.1.7
+
+- 画像投稿時に「レイヤー情報が～」を出ないようにした
+
 ### [2026/06/07] v0.1.6
 
 - `neo.js` と `neo.css` の読み込みURLにもキャッシュ回避パラメータを付与
