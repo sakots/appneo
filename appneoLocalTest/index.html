@@ -1,995 +1,144 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NEO Test</title>
-    <link rel="stylesheet" href="../neo/dist/neo.css" />
-    <script src="../neo/dist/neo.js" charset="UTF-8"></script>
-    <script>
-      const params = location.search
-        .substring(1)
-        .split("&")
-        .reduce((result, query) => {
-          const [k, v] = query.split("=");
-          result[k] = decodeURI(v);
-          return result;
-        }, {});
-      const appW = params.w || 400;
-      const appH = params.h || 460;
-      const w = params.iw || 300;
-      const h = params.ih || 300;
-
-      // アプレットフィット
-			const originalWidth = appW;
-			const originalHeight = appH;
-
-      class AppFitManager {
-        constructor() {
-          this.originalWidth = originalWidth;
-          this.originalHeight = originalHeight;
-          this.isExpanded = false;
-          this.init();
-        }
-
-        init() {
-          this.document = document;
-          this.refreshTargets();
-        }
-
-        refreshTargets() {
-          this.appstage = this.document.getElementById("appstage");
-          this.target = this.document.getElementById("neo-pageView");
-          this.neoContainer = this.document.getElementById("neo-container");
-          this.palette = this.document.getElementById("dyntools");
-          this.fitExp = this.document.getElementById("fit_exp");
-          this.fitComp = this.document.getElementById("fit_comp");
-        }
-
-        getClientHeight() {
-          const client = this.document.compatMode && this.document.compatMode !== "BackCompat"
-            ? this.document.documentElement
-            : this.document.body;
-          return client.clientHeight - 10;
-        }
-
-        getClientWidth() {
-          const client = this.document.compatMode && this.document.compatMode !== "BackCompat"
-            ? this.document.documentElement
-            : this.document.body;
-          return client.clientWidth || window.innerWidth;
-        }
-
-        getExpandedWidth() {
-          this.refreshTargets();
-          const paletteWidth = this.palette ? this.palette.getBoundingClientRect().width : 0;
-          const gap = 36;
-          const availableWidth = this.getClientWidth() - paletteWidth - gap;
-          return Math.max(parseInt(this.originalWidth, 10), Math.floor(availableWidth));
-        }
-
-        setAppletSize(width, height) {
-          this.refreshTargets();
-          const appletWidth = parseInt(width, 10);
-          const appletHeight = parseInt(height, 10);
-
-          if (typeof Neo !== "undefined" && Neo.config) {
-            Neo.config.applet_width = appletWidth;
-            Neo.config.applet_height = appletHeight;
-          }
-
-          if (this.target) {
-            this.target.style.width = `${appletWidth}px`;
-            this.target.style.height = `${appletHeight}px`;
-          }
-
-          if (this.neoContainer) {
-            this.neoContainer.style.width = `${appletWidth}px`;
-            this.neoContainer.style.height = `${appletHeight}px`;
-          }
-        }
-
-        expand() {
-          if (this.isExpanded) return;
-          
-          const clientHeight = this.getClientHeight();
-          const contentWidth = this.getExpandedWidth();
-          
-          // 幅と高さを拡張
-          const width = this.target && contentWidth > this.target.clientWidth
-            ? contentWidth
-            : parseInt(this.originalWidth, 10);
-          const height = this.target && clientHeight > this.target.clientHeight
-            ? clientHeight
-            : parseInt(this.originalHeight, 10);
-          this.setAppletSize(width, height);
-          
-          // UI状態を更新
-          this.fitExp.style.display = "none";
-          this.fitComp.style.display = "block";
-          this.isExpanded = true;
-          
-          this.resetZoom();
-          console.log("Expanded: ", this.target.style.width, this.target.style.height);
-        }
-
-        compress() {
-          if (!this.isExpanded) return;
-          
-          // 元のサイズに戻す
-          this.setAppletSize(this.originalWidth, this.originalHeight);
-          
-          // UI状態を更新
-          this.fitExp.style.display = "block";
-          this.fitComp.style.display = "none";
-          this.isExpanded = false;
-          
-          this.resetZoom();
-        }
-
-        resetZoom() {
-          // ズームをリセット
-          if (typeof Neo !== 'undefined' && Neo.painter) {
-            Neo.painter.setZoom(1);
-            Neo.resizeCanvas();
-            Neo.painter.updateDestCanvas();
-          }
-        }
-
-        toggle() {
-          if (this.isExpanded) {
-            this.compress();
-          } else {
-            this.expand();
-          }
-        }
-      }
-
-      // DOMContentLoadedイベントで初期化
-      document.addEventListener('DOMContentLoaded', function() {
-        window.appFitManager = new AppFitManager();
-        window.appFit = function (mode) {
-          if (mode) window.appFitManager.compress();
-          else window.appFitManager.expand();
-        };
-      });
-
-      // ダイナミックパレット
-      class DynamicPaletteManager {
-        constructor() {
-          this.DynamicColor = 1;	// パレットリストに色表示
-          this.Palettes = [];
-          this.customP = 0;
-          this.init();
-        }
-
-        init() {
-          // グローバル関数として公開（後方互換性のため）
-          window.setPalette = this.setPalette.bind(this);
-          window.PaletteSave = this.PaletteSave.bind(this);
-          window.PaletteNew = this.PaletteNew.bind(this);
-          window.PaletteRenew = this.PaletteRenew.bind(this);
-          window.PaletteDel = this.PaletteDel.bind(this);
-          window.P_Effect = this.P_Effect.bind(this);
-          window.PaletteMatrixGet = this.PaletteMatrixGet.bind(this);
-          window.PaletteMatrixSet = this.PaletteMatrixSet.bind(this);
-          window.PaletteMatrixHelp = this.PaletteMatrixHelp.bind(this);
-          window.PaletteSet = this.PaletteSet.bind(this);
-          window.PaletteListSetColor = this.PaletteListSetColor.bind(this);
-          window.GetBright = this.GetBright.bind(this);
-          window.Change_ = this.Change_.bind(this);
-          window.ChangeGrad = this.ChangeGrad.bind(this);
-          window.Hex = this.Hex.bind(this);
-          window.Hex_ = this.Hex_.bind(this);
-          window.GetPalette = this.GetPalette.bind(this);
-          window.GradSelC = this.GradSelC.bind(this);
-          window.GradView = this.GradView.bind(this);
-          window.showHideLayer = this.showHideLayer.bind(this);
-        }
-
-        parsePaletteEntry(entry, index) {
-          if (entry == null) return null;
-
-          let name = `Palette ${index + 1}`;
-          let source = String(entry);
-
-          if (typeof entry === "object") {
-            name = entry.name || name;
-            source = Array.isArray(entry.colors) ? entry.colors.join("\n") : String(entry.colors || "");
-          } else {
-            const matrixName = source.match(/^!([^\n]+)/);
-            const commaName = source.match(/^\s*([^,\n]+)\s*,/);
-            if (matrixName) name = matrixName[1].trim();
-            else if (commaName) name = commaName[1].trim();
-          }
-
-          const colors = typeof Neo !== "undefined" && Neo.formatColors
-            ? Neo.formatColors(source)
-            : (source.match(/#?[0-9a-fA-F]{6}\b/g) || [])
-                .slice(0, 14)
-                .map((color) => "#" + color.replace("#", "").toUpperCase())
-                .join("\n");
-
-          return colors ? { name, colors } : null;
-        }
-
-        parsePaletteData(paletteData) {
-          if (!paletteData) return [];
-
-          if (typeof paletteData === "string") {
-            return paletteData
-              .split(/\n(?=!)/)
-              .map((entry, index) => this.parsePaletteEntry(entry, index))
-              .filter(Boolean);
-          }
-
-          if (!Array.isArray(paletteData)) return [];
-
-          return paletteData
-            .map((entry, index) => this.parsePaletteEntry(entry, index))
-            .filter(Boolean);
-        }
-
-        syncPaletteOptions(entries) {
-          const select = document.Palette ? document.Palette.select : null;
-          if (!select) return;
-
-          while (select.options.length > 1) {
-            select.options[1] = null;
-          }
-
-          entries.forEach((entry) => {
-            select.options[select.options.length] = new Option(entry.name);
-          });
-
-          select.size = Math.min(Math.max(select.options.length, 1), 30);
-        }
-
-        // パレットデータを設定
-        setPaletteData(paletteData) {
-          const entries = this.parsePaletteData(paletteData);
-          const temporaryPalette = this.Palettes[0] || "";
-
-          this.Palettes = [temporaryPalette].concat(entries.map((entry) => entry.colors));
-          this.syncPaletteOptions(entries);
-          this.PaletteListSetColor();
-        }
-
-        // パレットを設定
-        setPalette() {
-          const d = document;
-          if (d.paintbbs && this.Palettes[d.Palette.select.selectedIndex]) {
-            d.paintbbs.setColors(this.Palettes[d.Palette.select.selectedIndex]);
-            if (!d.grad || !d.grad.view || !d.grad.view.checked) return;
-            this.GetPalette();
-          }
-        }
-
-        // パレットを一時保存
-        async PaletteSave() {
-          if (document.paintbbs) {
-            this.Palettes[0] = String(await document.paintbbs.getColors());
-          }
-        }
-
-        // 新しいパレットを作成
-        async PaletteNew() {
-          const d = document;
-          if (!d.paintbbs) return;
-          
-          const p = String(await d.paintbbs.getColors());
-          const s = d.Palette.select;
-          this.Palettes[s.length] = p;
-          this.customP++;
-          
-          const str = prompt("パレット名", "パレット " + this.customP);
-          if (str == null || str === "") {
-            this.customP--;
-            return;
-          }
-          
-          s.options[s.length] = new Option(str);
-          if (30 > s.length) s.size = s.length;
-          this.PaletteListSetColor();
-        }
-
-        // パレットを更新
-        async PaletteRenew() {
-          const d = document;
-          if (!d.paintbbs) return;
-          
-          this.Palettes[d.Palette.select.selectedIndex] = String(await d.paintbbs.getColors());
-          this.PaletteListSetColor();
-        }
-
-        // パレットを削除
-        PaletteDel() {
-          const p = this.Palettes.length;
-          const s = document.Palette.select;
-          const i = s.selectedIndex;
-          
-          if (i === -1) return;
-          
-          const flag = confirm("「" + s.options[i].text + "」を削除してよろしいですか？");
-          if (!flag) return;
-          
-          s.options[i] = null;
-          let j = i;
-          while (p > j) {
-            this.Palettes[j] = this.Palettes[j + 1];
-            j++;
-          }
-          
-          if (30 > s.length) s.size = s.length;
-        }
-
-        // パレット効果（明度調整・反転）
-        async P_Effect(v) {
-          v = parseInt(v);
-          const x = v === 255 ? -1 : 1;
-          const d = document.paintbbs;
-          
-          if (!d) return;
-          
-          const p = String(await d.getColors()).split("\n");
-          const l = p.length;
-          let s = "";
-          
-          for (let n = 0; l > n; n++) {
-            let R = v + (parseInt("0x" + p[n].substring(1, 3)) * x);
-            let G = v + (parseInt("0x" + p[n].substring(3, 5)) * x);
-            let B = v + (parseInt("0x" + p[n].substring(5, 7)) * x);
-            
-            if (R > 255) R = 255;
-            else if (0 > R) R = 0;
-            if (G > 255) G = 255;
-            else if (0 > G) G = 0;
-            if (B > 255) B = 255;
-            else if (0 > B) B = 0;
-            
-            s += "#" + this.Hex(R) + this.Hex(G) + this.Hex(B) + "\n";
-          }
-          
-          d.setColors(s);
-          this.PaletteListSetColor();
-        }
-
-        // パレットマトリクス取得
-        async PaletteMatrixGet() {
-          const d = document.Palette;
-          const p = this.Palettes.length;
-          const s = d.select;
-          const m = d.m_m.selectedIndex;
-          const t = d.setr;
-          
-          switch (m) {
-            case 0:
-            case 2:
-            default:
-              t.value = "";
-              let n = 0, c = 0;
-              while (p > n) {
-                if (s.options[n] != null) {
-                  t.value = t.value + "\n!" + s.options[n].text + "\n" + this.Palettes[n];
-                  c++;
-                }
-                n++;
-              }
-              alert("パレット数：" + c + "\nパレットマトリクスを取得しました");
-              break;
-            case 1:
-              t.value = "!Palette\n" + String(await document.paintbbs.getColors());
-              alert("現在使用されているパレット情報を取得しました");
-              break;
-          }
-          t.value = t.value.trim() + "\n!Matrix";
-        }
-
-        // パレットマトリクス設定
-        PaletteMatrixSet() {
-          const m = document.Palette.m_m.selectedIndex;
-          const str = "パレットマトリクスをセットします。";
-          let flag;
-          
-          switch (m) {
-            case 0:
-            default:
-              flag = confirm(str + "\n現在の全パレット情報は失われますがよろしいですか？");
-              break;
-            case 1:
-              flag = confirm(str + "\n現在使用しているパレットと置き換えますがよろしいですか？");
-              break;
-            case 2:
-              flag = confirm(str + "\n現在のパレット情報に追加しますがよろしいですか？");
-              break;
-          }
-          
-          if (!flag) return;
-          
-          this.PaletteSet();
-          const s = document.Palette.select;
-          if (s.length < 30) {
-            s.size = s.length;
-          } else {
-            s.size = 30;
-          }
-          if (this.DynamicColor) this.PaletteListSetColor();
-        }
-
-        // パレットマトリクスヘルプ
-        PaletteMatrixHelp() {
-          alert("★PALETTE MATRIX\nパレットマトリクスとはパレット情報を列挙したテキストを用いる事により\n自由なパレット設定を使用する事が出来ます。\n\n□マトリクスの取得\n1)「取得」ボタンよりパレットマトリクスを取得します。\n2)取得された情報が下のテキストエリアに出ます、これを全てコピーします。\n3)このマトリクス情報をテキストとしてファイルに保存しておくなりしましょう。\n\n□マトリクスのセット\n1）コピーしたマトリクスを下のテキストエリアに貼り付け(ペースト)します。\n2)ファイルに保存してある場合は、それをコピーし貼り付けます。\n3)「セット」ボタンを押せば保存されたパレットが使用できます。\n\n余分な情報があるとパレットが正しくセットされませんのでご注意下さい。");
-        }
-
-        // パレット設定
-        PaletteSet() {
-          const d = document.Palette;
-          const se = d.setr.value;
-          const s = d.select;
-          const m = d.m_m.selectedIndex;
-          const l = se.length;
-          
-          if (l < 1) {
-            alert("マトリクス情報がありません。");
-            return;
-          }
-          
-          let n = 0, o = 0, e = 0;
-          
-          switch (m) {
-            case 0:
-            default:
-              n = s.length;
-              while (n > 0) {
-                n--;
-                s.options[n] = null;
-              }
-            case 2:
-              let i = s.options.length;
-              n = se.indexOf("!", 0) + 1;
-              if (n === 0) return;
-              
-              const Matrix1 = 1;
-              const Matrix2 = -1;
-              
-              while (n < l) {
-                e = se.indexOf("\n#", n);
-                if (e === -1) return;
-                
-                const pn = se.substring(n, e + Matrix1);
-                o = se.indexOf("!", e);
-                if (o === -1) return;
-                
-                const pa = se.substring(e + 1, o + Matrix2);
-                if (pn !== "Palette") {
-                  if (i >= 0) s.options[i] = new Option(pn);
-                  this.Palettes[i] = pa;
-                  i++;
-                } else {
-                  document.paintbbs.setColors(pa);
-                }
-                n = o + 1;
-              }
-              break;
-            case 1:
-              n = se.indexOf("!", 0) + 1;
-              if (n === 0) return;
-              e = se.indexOf("\n#", n);
-              o = se.indexOf("!", e);
-              if (e >= 0) {
-                const pa = se.substring(e + 1, o - 1);
-                document.paintbbs.setColors(pa);
-              }
-          }
-          this.PaletteListSetColor();
-        }
-
-        // パレットリストに色を設定
-        PaletteListSetColor() {
-          const s = document.Palette ? document.Palette.select : null;
-          if (!s || !this.Palettes || this.Palettes.length === 0) {
-            return;
-          }
-          
-          for (let i = 1; s.options.length > i; i++) {
-            if (this.Palettes[i]) {
-              const c = this.Palettes[i].split("\n");
-              
-              // パレットデータから有効な色を探す
-              let backgroundColor = null;
-              
-              // 5番目の要素（インデックス4）を優先
-              if (c[4] && c[4].startsWith('#') && c[4].length === 7) {
-                backgroundColor = c[4];
-              } else {
-                // 5番目がなければ最後の要素を探す
-                for (let j = c.length - 1; j >= 0; j--) {
-                  if (c[j] && c[j].startsWith('#') && c[j].length === 7) {
-                    backgroundColor = c[j];
-                    break;
-                  }
-                }
-              }
-              
-              if (backgroundColor) {
-                s.options[i].style.background = backgroundColor;
-                s.options[i].style.color = this.GetBright(backgroundColor);
-              }
-            }
-          }
-        }
-
-        // 明度を取得
-        GetBright(c) {
-          const r = parseInt("0x" + c.substring(1, 3));
-          const g = parseInt("0x" + c.substring(3, 5));
-          const b = parseInt("0x" + c.substring(5, 7));
-          const max = (r >= g) ? (r >= b) ? r : b : (g >= b) ? g : b;
-          return 128 > max ? "#FFFFFF" : "#000000";
-        }
-
-        // グラデーション変更
-        Change_() {
-          if (!document.grad) return;
-          const st = document.grad.pst.value;
-          const ed = document.grad.ped.value;
-          
-          if (isNaN(parseInt("0x" + st))) return;
-          if (isNaN(parseInt("0x" + ed))) return;
-          this.GradView("#" + st, "#" + ed);
-        }
-
-        // グラデーション生成
-        ChangeGrad() {
-          const d = document;
-          if (!d.grad || !d.paintbbs) return;
-          const st = d.grad.pst.value;
-          const ed = d.grad.ped.value;
-          this.Change_();
-          
-          const degi_R = parseInt("0x" + st.substring(0, 2));
-          const degi_G = parseInt("0x" + st.substring(2, 4));
-          const degi_B = parseInt("0x" + st.substring(4, 6));
-          
-          let R = parseInt((degi_R - parseInt("0x" + ed.substring(0, 2))) / 15);
-          let G = parseInt((degi_G - parseInt("0x" + ed.substring(2, 4))) / 15);
-          let B = parseInt((degi_B - parseInt("0x" + ed.substring(4, 6))) / 15);
-          
-          if (isNaN(R)) R = 1;
-          if (isNaN(G)) G = 1;
-          if (isNaN(B)) B = 1;
-          
-          let p = "";
-          for (let cnt = 0, m1 = degi_R, m2 = degi_G, m3 = degi_B; 14 > cnt; cnt++, m1 -= R, m2 -= G, m3 -= B) {
-            if ((m1 > 255) || (0 > m1)) {
-              R *= -1;
-              m1 -= R;
-            }
-            if ((m2 > 255) || (0 > m2)) {
-              G *= -1;
-              m2 -= G;
-            }
-            if ((m3 > 255) || (0 > m3)) {
-              B *= -1;
-              m2 -= B;
-            }
-            p += "#" + this.Hex(m1) + this.Hex(m2) + this.Hex(m3) + "\n";
-          }
-          d.paintbbs.setColors(p);
-        }
-
-        // 16進数変換
-        Hex(n) {
-          n = parseInt(n);
-          if (0 > n) n *= -1;
-          let hex = "";
-          let m, k;
-          
-          while (n > 16) {
-            m = n;
-            if (n > 16) {
-              n = parseInt(n / 16);
-              m -= (n * 16);
-            }
-            k = this.Hex_(m);
-            hex = k + hex;
-          }
-          k = this.Hex_(n);
-          hex = k + hex;
-          while (2 > hex.length) {
-            hex = "0" + hex;
-          }
-          return hex;
-        }
-
-        // 16進数変換（内部関数）
-        Hex_(n) {
-          if (!isNaN(n)) {
-            if (n === 10) n = "A";
-            else if (n === 11) n = "B";
-            else if (n === 12) n = "C";
-            else if (n === 13) n = "D";
-            else if (n === 14) n = "E";
-            else if (n === 15) n = "F";
-          } else {
-            n = "";
-          }
-          return n;
-        }
-
-        // パレット取得
-        async GetPalette() {
-          const d = document;
-          if (!d.paintbbs || !d.grad) return;
-          
-          const p = String(await d.paintbbs.getColors());
-          if (p === "null" || p === "") return;
-          
-          const ps = p.split("\n");
-          window.ps = ps; // グローバル変数として設定（後方互換性のため）
-          
-          const st = d.grad.p_st.selectedIndex;
-          const ed = d.grad.p_ed.selectedIndex;
-          
-          d.grad.pst.value = ps[st].substring(1, 7);
-          d.grad.ped.value = ps[ed].substring(1, 7);
-          
-          this.GradSelC();
-          this.GradView(ps[st], ps[ed]);
-          this.PaletteListSetColor();
-        }
-
-        // グラデーション選択色
-        GradSelC() {
-          if (!document.grad || !document.grad.view.checked) return;
-          
-          const d = document.grad;
-          const l = window.ps ? window.ps.length : 0;
-          let pe = "";
-          
-          for (let n = 0; l > n; n++) {
-            let R = 255 + (parseInt("0x" + window.ps[n].substring(1, 3)) * -1);
-            let G = 255 + (parseInt("0x" + window.ps[n].substring(3, 5)) * -1);
-            let B = 255 + (parseInt("0x" + window.ps[n].substring(5, 7)) * -1);
-            
-            if (R > 255) R = 255;
-            else if (0 > R) R = 0;
-            if (G > 255) G = 255;
-            else if (0 > G) G = 0;
-            if (B > 255) B = 255;
-            else if (0 > B) B = 0;
-            
-            pe += "#" + this.Hex(R) + this.Hex(G) + this.Hex(B) + "\n";
-          }
-          
-          pe = pe.split("\n");
-          for (let n = 0; l > n; n++) {
-            d.p_st.options[n].style.background = window.ps[n];
-            d.p_st.options[n].style.color = pe[n];
-            d.p_ed.options[n].style.background = window.ps[n];
-            d.p_ed.options[n].style.color = pe[n];
-          }
-        }
-
-        // グラデーションビュー
-        GradView(st, ed) {
-          const d = document;
-          if (!d.grad || !d.grad.view.checked) return;
-        }
-
-        // レイヤー表示/非表示切り替え
-        showHideLayer() {
-          const d = document;
-          let l;
-
-          if (!d.grad) return;
-          
-          if (d.layers) {
-            l = d.layers["psft"];
-          } else {
-            l = d.all("psft").style;
-          }
-          
-          if (!d.grad.view.checked) {
-            l.visibility = "hidden";
-          }
-          if (d.grad.view.checked) {
-            l.visibility = "visible";
-            this.GetPalette();
-          }
-        }
-      }
-
-      // グローバルインスタンスを作成
-      window.dynamicPaletteManager = new DynamicPaletteManager();
-		</script>
-  </head>
-
-  <body>
-    <a href="viewer.html">PCH Test</a>
-    <h1>PaintBBS NEO Test</h1>
-    <div class="container">
-      <section id="appstage">
-        <div id="appletdummy"></div>
-        <!-- 動的パレットスクリプト -->
-        <script>
-          // パレットデータの初期化
-          const Palettes = new Array();
-          Palettes[0] = "2.5R,FF406C,F13E67,E33C62,D53A5D,C73858,B93653,AB344E,9D3249,8F3044,812E3F,732C3A,652A35,572830,49262B";
-          Palettes[1] = "5R,FF4455,F14152,E33E4F,D53B4C,C73849,B93546,AB3243,9D2F40,8F2C3D,81293A,732637,652334,572031,491D2E";
-          Palettes[2] = "7.5R,FF4B33,F24832,E54531,D84230,CB3F2F,BE3C2E,B1392D,A4362C,97332B,8A302A,7D2D29,702A28,632727,562426";
-          Palettes[3] = "10R,FF7C31,F27630,E5702F,D86A2E,CB642D,BE5E2C,B1582B,A4522A,974C29,8A4628,7D4027,703A26,633425,562E24";
-          Palettes[4] = "2.5YR,FF8B2C,F3822A,E77928,DB7026,CF6724,C35E22,B75520,AB4C1E,9F431C,933A1A,873118,7B2816,6F1F14,631612";
-          Palettes[5] = "5YR,FFAE2B,F1A42A,E39A29,D59028,C78627,B97C26,AB7225,9D6824,8F5E23,815422,734A21,654020,57361F,492C1E";
-          Palettes[6] = "7.5YR,FFB73C,F1AD39,E3A336,D59933,C78F30,B9852D,AB7B2A,9D7127,8F6724,815D21,73531E,65491B,573F18,493515";
-          Palettes[7] = "10YR,FFBD28,F1B326,E3A924,D59F22,C79520,B98B1E,AB811C,9D771A,8F6D18,816316,735914,654F12,574516,493B0E";
-          Palettes[8] = "2.5Y,FFDE34,F1D131,E3C42E,D5B72B,C7AA28,B99D25,AB9022,9D831F,8F761C,816919,735C16,654F13,574216,49350D";
-          Palettes[9] = "5Y,FFE51D,F1D81C,E3CB1B,D5BE1A,C7B119,B9A418,AB9717,9D8A16,8F7D15,817014,736313,655612,574911,493C16";
-          Palettes[10] = "7.5Y,FEE90C,F0DC0C,E2CF0C,D4C20C,C6B50C,B8A80C,AA9B0C,9C8E0C,8E810C,80740C,72670C,645A0C,564D0C,48400C";
-          Palettes[11] = "10Y,F2EC4A,E4DF46,D6D242,C8C53E,BAB83A,ACAB36,9E9E32,90912E,82842A,747726,666A22,585D1E,4A501A,3C4316";
-          Palettes[12] = "2.5GY,E2F10D,D5E30D,C8D50D,BBC70D,AEB90D,A1AB0D,949D0D,878F0D,7A810D,6D730D,60650D,53570D,46490D,393B0D";
-          Palettes[13] = "5GY,D0F629,C4E828,B8DA27,ACCC26,A0BE25,94B024,88A223,7C9422,708621,647820,586A1F,4C5C1E,404E1D,34401C";
-          Palettes[14] = "7.5GY,A1FF2C,98F12B,8FE32A,86D529,7DC728,74B927,6BAB26,629D25,598F24,508123,477322,3E6521,355720,2C491F";
-          Palettes[15] = "10GY,16FF29,16F128,16E327,16D526,16C725,16B924,16AB23,169D22,168F21,168120,16731F,16651E,16571D,16491C";
-          Palettes[16] = "2.5G,54FF9B,50F193,4CE38B,48D583,44C77B,40B973,3CAB6B,389D63,348F5B,308153,2C734B,286543,24573B,204933";
-          Palettes[17] = "5G,59FFBD,55F1B3,51E3A9,4DD59F,49C795,45B98B,41AB81,3D9D77,398F6D,358163,317359,2D654F,295745,25493B";
-          Palettes[18] = "7.5G,48FFC9,45F1BE,42E3B3,3FD5A8,3CC79D,39B992,36AB87,339D7C,308F71,2D8166,2A735B,276550,245745,21493A";
-          Palettes[19] = "10G,33FFD4,31F1C8,2FE3BC,2DD5B0,2BC7A4,29B998,27AB8C,259D80,238F74,218168,1F735C,1D6550,1B5744,194938";
-          Palettes[20] = "2.5BG,0FFFDF,0FF1D3,0FE3C7,0FD5BB,0FC7AF,0FB9A3,0FAB97,0F9D8B,0F8F7F,0F8173,0F7367,0F655B,0F574F,0F4943";
-          Palettes[21] = "5BG,5AFEE3,55F0D6,50E2C9,4BD4BC,46C6AF,41B8A2,3CAA95,379C88,328E7B,2D806E,287261,236454,1E5647,19483A";
-          Palettes[22] = "7.5BG,4FFDF6,4BEFE8,47E1DA,43D3CC,3FC5BE,3BB7B0,37A9A2,339B94,2F8D86,2B7F78,27716A,23635C,1F554E,1B4740";
-          Palettes[23] = "10BG,42DEE4,3FD2D8,3CC6CC,39BAC0,36AEB4,33A2A8,30969C,2D8A90,2A7E84,277278,24666C,215A60,1E4E54,1B4248";
-          Palettes[24] = "2.5B,45DDEE,42D1E1,3FC5D4,3CB9C7,39ADBA,36A1AD,3395A0,308993,2D7D86,2A7179,27656C,24595F,214D52,1E4145";
-          Palettes[25] = "5B,50DBF9,4CCFEB,48C3DD,44B7CF,40ABC1,3C9FB3,3893A5,348797,307B89,2C6F7B,28636D,24575F,204B51,1C3F43";
-          Palettes[26] = "7.5B,60D8FF,5BCCF1,56C0E3,51B4D5,4CA8C7,479CB9,4290AB,3D849D,38788F,336C81,2E6073,295465,244857,1F3C49";
-          Palettes[27] = "10B,35BBF4,33B1E7,31A7DA,2F9DCD,2D93C0,2B89B3,297FA6,277599,256B8C,23617F,215772,1F4D65,1D4358,1B394B";
-          Palettes[28] = "2.5PB,5EB7F8,59ADEB,54A3DE,4F99D1,4A8FC4,4585B7,407BAA,3B719D,366790,315D83,2C5376,274969,223F5C,1D354F";
-          Palettes[29] = "5PB,1798FB,1790EE,1788E1,1780D4,1778C7,1770BA,1768AD,1760A0,175893,175086,174879,17406C,17385F,173052";
-          Palettes[30] = "7.5PB,486AFF,4565F1,4260E3,3F5BD5,3C56C7,3951B9,364CAB,33479D,30428F,2D3D81,2A3873,273365,242E57,212949";
-          Palettes[31] = "10PB,8756FF,8152F1,7B4EE3,754AD5,6F46C7,6942B9,633EAB,5D3A9D,57368F,513281,4B2E73,452A65,3F2657,392249";
-          Palettes[32] = "2.5P,B773FE,AE6DF0,A567E2,9C61D4,935BC6,8A55B8,814FAA,78499C,6F438E,663D80,5D3772,543164,4B2B56,422548";
-          Palettes[33] = "5P,CF64FE,C45FF0,B95AE2,AE55D4,A350C6,984BB8,8D46AA,82419C,773C8E,6C3780,613272,562D64,4B2856,402348";
-          Palettes[34] = "7.5P,FD7CFF,EF76F1,E170E3,D36AD5,C564C7,B75EB9,A958AB,9B529D,8D4C8F,7F4681,714073,633A65,553457,472E49";
-          Palettes[35] = "10P,FF58FF,F154F1,E350E3,D54CD5,C748C7,B944B9,AB40AB,9D3C9D,8F388F,813481,733073,652C65,572857,492449";
-          Palettes[36] = "2.5RP,FF5BE0,F157D4,E353C8,D54FBC,C74BB0,B947A4,AB4398,9D3F8C,8F3B80,813774,733368,652F5C,572B50,492744";
-          Palettes[37] = "5RP,FF64C0,F15FB6,E35AAC,D555A2,C75098,B94B8E,AB4684,9D417A,8F3C70,813766,73325C,652D52,572848,49233E";
-          Palettes[38] = "7.5RP,FF6FAC,F16AA3,E3659A,D56091,C75B88,B9567F,AB5176,9D4C6D,8F4764,81425B,733D52,653849,573340,492E37";
-          Palettes[39] = "10RP,FF6E97,F16990,E36489,D55F82,C75A7B,B95574,AB506D,9D4B66,8F465F,814158,733C51,65374A,573243,492D3C";
-          Palettes[40] = "N,FFFFFF,EFEFEF,DFDFDF,CFCFCF,BFBFBF,AFAFAF,9F9F9F,8F8F8F,7F7F7F,6F6F6F,5F5F5F,4F4F4F,3F3F3F,2F2F2F";
-          Palettes[41] = "Default,000000,FFFFFF,B47575,888888,FA9696,C096C0,FFB6FF,8080FF,25C7C9,E7E58D,E7962D,99CB7B,FCECE2,F9DDCF";
-        </script>
-        <script>
-          // パレットデータをマネージャーに設定
-          document.addEventListener('DOMContentLoaded', function() {
-            // 少し遅延させて確実にマネージャーが初期化されるのを待つ
-            setTimeout(function() {
-              if (window.dynamicPaletteManager && window.Palettes) {
-                window.dynamicPaletteManager.setPaletteData(window.Palettes);
-                // 初期化後にパレットリストの色を設定
-                if (window.dynamicPaletteManager.DynamicColor) {
-                  window.dynamicPaletteManager.PaletteListSetColor();
-                }
-              }
-            }, 100);
-          });
-        </script>
-
-        <script>
-          const html = `
-            <div id="paintbbs"></div>
-            <div class="app" id="apps">
-              <applet-dummy name="paintbbs" width="${appW}" height="${appH}" >
-                <param name="image_width" value="${w}">
-                <param name="image_height" value="${h}">
-                <param name="thumbnail_type" value="animation">
-                <param name="neo_show_right_button" value="true">
-                <param name="neo_disable_grid_touch_move" value="true">
-                <param name="neo_disable_turn_original_glitch" value="true">
-                <param name="neo_enable_zoom_out" value="true">
-                <PARAM NAME="neo_emulation_mode" VALUE="2.04">
-              </applet-dummy>
-            </div>
-            <br>
-            <form>
-              <input type="number" name="w" value="${appW}"> x
-              <input type="number" name="h" value="${appH}"> Applet<br>
-              <input type="number" name="iw" value="${w}"> x
-              <input type="number" name="ih" value="${h}"> Canvas<br>
-              <input type="reset" value="RESET"><br>
-              <input type="submit" value="RELOAD">
-            </form>
-          `;
-          const appletdummy = document.getElementById("appletdummy");
-          appletdummy.insertAdjacentHTML("afterbegin", html);
-
-          document.paintBBSCallback = function (str) {
-            if (str === "check") {
-              const image = Neo.painter.getImage();
-              const animation = Neo.painter.getThumbnail("animation");
-
-              const img = document.createElement("img");
-              img.src = image.toDataURL("image/png");
-              img.className = "sample";
-
-              const a = document.createElement("a");
-              a.href = URL.createObjectURL(animation);
-              a.innerHTML = a.download = new Date() - 0 + ".pch";
-
-              const top = document.querySelector("img.sample");
-              document.body.insertBefore(img, top);
-              document.body.insertBefore(a, top);
-              return false;
-            }
-          };
-        </script>
-      </section>
-
-      <div class="palette" id="dyntools">
-        <form name="Palette">
-          <fieldset id="fit_exp">
-            <legend>FIT!</legend>
-            <input class="button" type="button" value="← FIT →" onclick="appFit(0)">
-          </fieldset>
-          <fieldset id="fit_comp" style="display: none;">
-            <legend>FIT!</legend>
-            <input class="button" type="button" value="→ FIT ←" onclick="appFit(1)">
-          </fieldset>
-          <fieldset>
-            <legend>TOOL</legend>
-            <input class="button" type="button" value="左" onclick="Neo.setToolSide(true)">
-            <input class="button" type="button" value="右" onclick="Neo.setToolSide(false)">
-            手ぶれ
-            <select onchange="Neo.setStabilizeLevel(this.value)">
-              <option value="0">0</option>
-              <option value="1" selected>1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-            </select>
-          </fieldset>
-          <fieldset>
-            <legend>PALETTE</legend>
-            <select class="form palette_set" name="select" size="13" onChange="setPalette()" id="palnames">
-              <option>一時パレット</option>
-              <option>No.01 赤  </option>
-              <option>No.02 鳶  </option>
-              <option>No.03 山吹</option>
-              <option>No.04 黄金</option>
-              <option>No.05 黄  </option>
-              <option>No.06 若芽</option>
-              <option>No.07 萌黄</option>
-              <option>No.08 若葉</option>
-              <option>No.09 緑  </option>
-              <option>No.10 青磁</option>
-              <option>No.11 常磐</option>
-              <option>No.12 浅葱</option>
-              <option>No.13 水  </option>
-              <option>No.14 空  </option>
-              <option>No.15 海  </option>
-              <option>No.16 露草</option>
-              <option>No.17 青  </option>
-              <option>No.18 桔梗</option>
-              <option>No.19 藤  </option>
-              <option>No.20 葡萄</option>
-              <option>No.21 紫  </option>
-              <option>No.22 紫暗</option>
-              <option>No.23 梅紫</option>
-              <option>No.24 茜  </option>
-              <option>No.25 白黒</option>
-              <option>No.26 肌  </option>
-              <option>No.27 褐  </option>
-              <option>No.28 淡  </option>
-              <option>No.29 標準</option>
-            </select><br>
-            <input class="button" type="button" value="一時保存" onClick="PaletteSave()"><br>
-            <input class="button" type="button" value="作成" onClick="PaletteNew()">
-            <input class="button" type="button" value="変更" onClick="PaletteRenew()">
-            <input class="button" type="button" value="削除" onClick="PaletteDel()"><br>
-            <input class="button" type="button" value="明＋" onClick="P_Effect(10)">
-            <input class="button" type="button" value="明－" onClick="P_Effect(-10)">
-            <input class="button" type="button" value="反転" onClick="P_Effect(255)">
-          </fieldset>
-          <fieldset>
-            <legend>MATRIX</legend>
-            <form>
-            <select class="form" name="m_m">
-              <option value="0">全体</option>
-              <option value="1">現在</option>
-              <option value="2">追加</option>
-            </select>
-            <input type="button" class="button" name="m_g" value="GET" onclick="PaletteMatrixGet()">
-            <input type="button" class="button" name="m_h" value="SET" onclick="PaletteMatrixSet()">
-            <input type="button" class="button" name="1" value=" ? " onclick="PaletteMatrixHelp()"><br>
-            <textarea class="form" name="setr" rows="1" cols="13" onmouseover="this.select()"></textarea>
-            </form>
-          </fieldset>
-          <fieldset>
-            <legend>GRADATION</legend>
-            <form name="grad">
-              <input type="checkbox" name="view" onclick="showHideLayer()">
-              <input type="button" class="button" value=" OK " onclick="ChangeGrad()">
-              <input type="color">
-              <br>
-              <select class="form" name="p_st" onchange="GetPalette()">
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>4</option>
-                <option>5</option>
-                <option>6</option>
-                <option>7</option>
-                <option>8</option>
-                <option>9</option>
-                <option>10</option>
-                <option>11</option>
-                <option>12</option>
-                <option>13</option>
-                <option>14</option>
-              </select>
-              <input class="form" type="text" name="pst" size="8" onkeypress="Change_()" onchange="Change_()"><br>
-              <select class="form" name="p_ed" onchange="GetPalette()">
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>4</option>
-                <option>5</option>
-                <option>6</option>
-                <option>7</option>
-                <option>8</option>
-                <option>9</option>
-                <option>10</option>
-                <option>11</option>
-                <option selected>12</option>
-                <option>13</option>
-                <option>14</option>
-              </select>
-              <input class="form" type="text" name="ped" size="8" onkeypress="Change_()" onchange="Change_()"><div id="psft" style="position:absolute;width:100px;height:30px;z-index:1;left:5px;top:10px;"></div>
-            </form>
-          </fieldset>
-          <p class="c">DynamicPalette &copy;NoraNeko</p>
-        </form>
-      </div>
-    </div>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>appneo Local Test</title>
     <style>
-      img.sample {
-        border: 1px solid black;
-        margin-bottom: 5px;
-        display: block;
+      body {
+        margin: 24px;
+        font-family: system-ui, sans-serif;
+        background: #f4f4f4;
+        color: #222;
       }
 
-      input {
-        width: fit-content;
+      main {
+        max-width: 980px;
+        margin: 0 auto;
       }
 
-      #pageView {
-        margin: 0 !important;
-      }
-      div#appletdummy {
-        display: contents;
+      .test-panel {
+        padding: 14px;
+        border: 1px solid #bbb;
+        background: #fff;
       }
 
-      .container {
+      .test-row {
         display: flex;
-        justify-content: center;
+        flex-wrap: wrap;
         align-items: center;
-        align-content: center;
-        gap: 12px;
+        gap: 8px;
+        margin: 8px 0;
       }
 
-      #appstage {
-        display: block;
+      input[type="number"] {
+        width: 5em;
       }
 
-      #dyntools {
-        display: block;
-        text-align: center;
+      button,
+      input[type="button"] {
+        padding: 4px 10px;
+        cursor: pointer;
       }
-      .palette_set {
-        max-height: 300px;
-        overflow-y: scroll;
+
+      .preview-log {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .preview-log img {
+        max-width: 300px;
+        border: 1px solid #999;
+        background: #fff;
+      }
+
+      .note {
+        font-size: 13px;
+        color: #555;
       }
     </style>
+    <script>
+      window.APPNEO_AUTO_START = false;
+      window.APPNEO_NEO_BASE = new URL("../neo/dist/", location.href).href;
+
+      document.paintBBSCallback = function (message) {
+        if (message !== "check" || !window.Neo || !Neo.painter) return true;
+
+        const log = document.getElementById("preview-log");
+        const image = Neo.painter.getImage();
+        const img = document.createElement("img");
+        img.src = image.toDataURL("image/png");
+        img.alt = "Saved canvas preview";
+
+        const item = document.createElement("div");
+        item.appendChild(img);
+
+        try {
+          const animation = Neo.painter.getThumbnail("animation");
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(animation);
+          link.download = `${Date.now()}.pch`;
+          link.textContent = "Download animation";
+          item.appendChild(document.createElement("br"));
+          item.appendChild(link);
+        } catch (error) {
+          console.warn("Animation export failed", error);
+        }
+
+        log.prepend(item);
+        return false;
+      };
+    </script>
+    <script src="../appneo.js" charset="UTF-8"></script>
+    <script>
+      const getParam = (name, fallback) => {
+        const value = new URLSearchParams(location.search).get(name);
+        return value || fallback;
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const width = document.querySelector("input[name='picw']");
+        const height = document.querySelector("input[name='pich']");
+        width.value = getParam("w", "300");
+        height.value = getParam("h", "300");
+
+        document.getElementById("start-appneo").addEventListener("click", (event) => {
+          event.preventDefault();
+          window.appneoStart();
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>appneo Local Test</h1>
+
+      <form class="test-panel" action="./" method="post">
+        <p class="note">
+          This page loads <code>../appneo.js</code> and starts PaintBBS NEO with local files.
+        </p>
+
+        <div class="test-row">
+          Canvas:
+          <input type="number" name="picw" min="50" max="2000" value="300">
+          x
+          <input type="number" name="pich" min="50" max="2000" value="300">
+          <input id="start-appneo" type="button" value="お絵かきする">
+        </div>
+
+        <applet-dummy name="paintbbs" width="400" height="460">
+          <param name="url_save" value="paintpost.php">
+          <param name="url_exit" value="./index.html">
+          <param name="thumbnail_type" value="animation">
+          <param name="neo_show_right_button" value="true">
+          <param name="neo_disable_grid_touch_move" value="true">
+          <param name="neo_disable_turn_original_glitch" value="true">
+          <param name="neo_enable_zoom_out" value="true">
+        </applet-dummy>
+      </form>
+
+      <section class="preview-log" id="preview-log" aria-live="polite"></section>
+    </main>
   </body>
 </html>
