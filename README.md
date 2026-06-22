@@ -12,6 +12,10 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/06/22] v0.1.8
+
+- カラーピッカーからグラデーションを作る機能追加
+
 ### [2026/06/15] v0.1.7
 
 - 画像投稿時に「レイヤー情報が～」を出ないようにした
