@@ -3,7 +3,7 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.7";
+  const APPNEO_VERSION = "v0.1.8";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
@@ -174,7 +174,6 @@
   const createPaintBbsParams = (sizes, boardParams) => {
     return {
       neo_max_pch: 2048,
-      neo_confirm_layer_info_notsaved: false,
       neo_confirm_unload: true,
       neo_show_right_button: true,
       neo_animation_skip: true,
@@ -227,6 +226,10 @@
       .slice(0, 14)
       .map((color) => "#" + color.replace("#", "").toUpperCase())
       .join("\n");
+  };
+
+  const formatColor = (source) => {
+    return formatColors(source).split("\n")[0] || "";
   };
 
   const hex = (value) => {
@@ -371,6 +374,8 @@
       window.GetPalette = this.GetPalette.bind(this);
       window.ChangeGrad = this.ChangeGrad.bind(this);
       window.Change_ = this.Change_.bind(this);
+      window.PickGradColor = this.PickGradColor.bind(this);
+      window.ColorPickerToGradation = this.ColorPickerToGradation.bind(this);
     }
 
     get select() {
@@ -524,10 +529,62 @@
       const end = document.grad.p_ed.selectedIndex;
       if (colors[start]) document.grad.pst.value = colors[start].substring(1);
       if (colors[end]) document.grad.ped.value = colors[end].substring(1);
+      this.SyncGradColorInputs();
+      this.GradSelC(colors);
       this.PaletteListSetColor();
     }
 
-    Change_() {}
+    Change_() {
+      this.SyncGradColorInputs();
+    }
+
+    SyncGradColorInputs() {
+      if (!document.grad) return;
+
+      const pairs = [
+        [document.grad.pst, document.grad.pst_color],
+        [document.grad.ped, document.grad.ped_color],
+      ];
+
+      pairs.forEach(([text, picker]) => {
+        if (!text || !picker) return;
+        const color = formatColor(text.value);
+        if (color) picker.value = color.toLowerCase();
+      });
+    }
+
+    PickGradColor(target) {
+      if (!document.grad) return;
+
+      const text = target === "end" ? document.grad.ped : document.grad.pst;
+      const picker = target === "end" ? document.grad.ped_color : document.grad.pst_color;
+      const color = picker ? formatColor(picker.value) : "";
+      if (text && color) text.value = color.substring(1);
+      this.Change_();
+    }
+
+    ColorPickerToGradation(colorPicker, targetName) {
+      const target = document.grad ? document.grad[targetName] : null;
+      const color = colorPicker ? formatColor(colorPicker.value) : "";
+      if (!target || !color) return;
+
+      target.value = color.substring(1);
+      this.Change_();
+    }
+
+    GradSelC(colors) {
+      if (!document.grad) return;
+
+      [document.grad.p_st, document.grad.p_ed].forEach((select) => {
+        if (!select) return;
+        colors.forEach((color, index) => {
+          const formatted = formatColor(color);
+          if (!formatted || !select.options[index]) return;
+          select.options[index].style.background = formatted;
+          select.options[index].style.color = getBright(formatted);
+        });
+      });
+    }
 
     ChangeGrad() {
       if (!document.grad || !document.paintbbs) return;
@@ -549,6 +606,7 @@
       }).join("\n");
 
       document.paintbbs.setColors(colors);
+      this.GradSelC(colors.split("\n"));
       this.PaletteListSetColor();
     }
 
@@ -717,11 +775,13 @@
             <select class="appneo-select" name="p_st" onchange="GetPalette()">
               ${createOptions(14)}
             </select>
-            <input class="appneo-text" type="text" name="pst" size="8" oninput="Change_()"><br>
+            <input class="appneo-text" type="text" name="pst" size="8" maxlength="6" pattern="^[0-9a-fA-F]{6}$" oninput="Change_()">
+            <input class="appneo-color colorPicker" type="color" name="pst_color" value="#000000" oninput="ColorPickerToGradation(this, 'pst')" onchange="ColorPickerToGradation(this, 'pst')"><br>
             <select class="appneo-select" name="p_ed" onchange="GetPalette()">
               ${createOptions(14, 11)}
             </select>
-            <input class="appneo-text" type="text" name="ped" size="8" oninput="Change_()">
+            <input class="appneo-text" type="text" name="ped" size="8" maxlength="6" pattern="^[0-9a-fA-F]{6}$" oninput="Change_()">
+            <input class="appneo-color colorPicker" type="color" name="ped_color" value="#FFFFFF" oninput="ColorPickerToGradation(this, 'ped')" onchange="ColorPickerToGradation(this, 'ped')">
           </fieldset>
         </form>
         <p class="appneo-credit">DynamicPalette &copy;NoraNeko</p>
@@ -767,6 +827,12 @@
         #${APPNEO_ID} .appneo-textarea {
           max-width: 165px;
           font-size: 12px;
+        }
+        #${APPNEO_ID} .appneo-color {
+          width: 28px;
+          height: 22px;
+          padding: 0;
+          vertical-align: middle;
         }
         #${APPNEO_ID} .appneo-credit {
           margin: 4px 0 0;
