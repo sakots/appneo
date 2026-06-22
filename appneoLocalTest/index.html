@@ -30,6 +30,30 @@
         margin: 8px 0;
       }
 
+      .misskey-panel {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #ddd;
+      }
+
+      .misskey-panel label {
+        display: grid;
+        gap: 3px;
+      }
+
+      .misskey-panel input[type="url"],
+      .misskey-panel input[type="password"],
+      .misskey-panel textarea {
+        box-sizing: border-box;
+        width: min(100%, 520px);
+      }
+
+      .misskey-panel textarea {
+        min-height: 4.5em;
+      }
+
       input[type="number"] {
         width: 5em;
       }
@@ -55,6 +79,16 @@
       .note {
         font-size: 13px;
         color: #555;
+      }
+
+      .status {
+        min-height: 1.4em;
+        font-size: 13px;
+        color: #275227;
+      }
+
+      .status.error {
+        color: #8a1f11;
       }
 
       #appneo-root {
@@ -103,14 +137,213 @@
         }
 
         log.prepend(item);
+        postSavedImageToMisskey(image);
         return false;
       };
     </script>
     <script src="../appneo.js" charset="UTF-8"></script>
     <script>
+      const MISSKEY_STORAGE_KEY = "appneoLocalTestMisskey";
+      let misskeyMiAuthSessionId = "";
+
       const getParam = (name, fallback) => {
         const value = new URLSearchParams(location.search).get(name);
         return value || fallback;
+      };
+
+      const getMisskeySettings = () => {
+        return {
+          enabled: document.getElementById("misskey-enabled").checked,
+          instance: document.getElementById("misskey-instance").value.trim(),
+          token: document.getElementById("misskey-token").value.trim(),
+          text: document.getElementById("misskey-text").value,
+          visibility: document.getElementById("misskey-visibility").value,
+          sensitive: document.getElementById("misskey-sensitive").checked,
+        };
+      };
+
+      const setMisskeyStatus = (message, isError = false) => {
+        const status = document.getElementById("misskey-status");
+        status.textContent = message;
+        status.classList.toggle("error", isError);
+      };
+
+      const normalizeMisskeyUrl = (value) => {
+        const source = value || "https://misskey.io";
+        const withScheme = /^https?:\/\//i.test(source) ? source : `https://${source}`;
+        const url = new URL(withScheme);
+        return url.origin;
+      };
+
+      const canvasToBlob = (canvas) => {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("画像データを作成できませんでした。"));
+          }, "image/png");
+        });
+      };
+
+      const readApiResponse = async (response) => {
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) {
+          const message = data.error && data.error.message
+            ? data.error.message
+            : `HTTP ${response.status}`;
+          throw new Error(message);
+        }
+        return data;
+      };
+
+      const createMiAuthSessionId = () => {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+
+        const values = new Uint32Array(4);
+        if (window.crypto && crypto.getRandomValues) {
+          crypto.getRandomValues(values);
+          return [...values].map((value) => value.toString(16).padStart(8, "0")).join("");
+        }
+        return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+      };
+
+      const getMiAuthBaseUrl = () => {
+        return normalizeMisskeyUrl(document.getElementById("misskey-instance").value.trim());
+      };
+
+      const startMisskeyMiAuth = () => {
+        try {
+          const baseUrl = getMiAuthBaseUrl();
+          misskeyMiAuthSessionId = createMiAuthSessionId();
+
+          const authUrl = new URL(`${baseUrl}/miauth/${misskeyMiAuthSessionId}`);
+          authUrl.searchParams.set("name", "appneoLocalTest");
+          authUrl.searchParams.set("permission", "write:notes,write:drive");
+
+          window.open(authUrl.href, "appneo-misskey-miauth", "noopener,noreferrer");
+          setMisskeyStatus("Misskeyの認証画面を開きました。許可したら「認証確認」を押してください。");
+        } catch (error) {
+          console.error(error);
+          setMisskeyStatus(`MiAuth開始に失敗しました: ${error.message || error}`, true);
+        }
+      };
+
+      const checkMisskeyMiAuth = async () => {
+        try {
+          if (!misskeyMiAuthSessionId) {
+            throw new Error("先に「MiAuthで認証」を押してください。");
+          }
+
+          const baseUrl = getMiAuthBaseUrl();
+          setMisskeyStatus("Misskey認証を確認しています...");
+          const response = await fetch(`${baseUrl}/api/miauth/${misskeyMiAuthSessionId}/check`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+          });
+          const data = await readApiResponse(response);
+          if (!data.token) throw new Error("認証トークンが返ってきませんでした。");
+
+          document.getElementById("misskey-token").value = data.token;
+          document.getElementById("misskey-enabled").checked = true;
+          misskeyMiAuthSessionId = "";
+          saveMisskeySettings();
+          setMisskeyStatus("Misskey認証が完了しました。このまま投稿できます。");
+        } catch (error) {
+          console.error(error);
+          setMisskeyStatus(`MiAuth確認に失敗しました: ${error.message || error}`, true);
+        }
+      };
+
+      const uploadMisskeyFile = async (baseUrl, token, blob, sensitive) => {
+        const filename = `appneo-${Date.now()}.png`;
+        const body = new FormData();
+        body.append("i", token);
+        body.append("file", blob, filename);
+        body.append("name", filename);
+        body.append("isSensitive", sensitive ? "true" : "false");
+
+        const response = await fetch(`${baseUrl}/api/drive/files/create`, {
+          method: "POST",
+          body,
+        });
+        return readApiResponse(response);
+      };
+
+      const createMisskeyNote = async (baseUrl, settings, fileId) => {
+        const body = {
+          i: settings.token,
+          text: settings.text,
+          fileIds: [fileId],
+          visibility: settings.visibility,
+        };
+
+        const response = await fetch(`${baseUrl}/api/notes/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        return readApiResponse(response);
+      };
+
+      const postSavedImageToMisskey = async (canvas) => {
+        const settings = getMisskeySettings();
+        if (!settings.enabled) return;
+
+        try {
+          if (!settings.token) throw new Error("Misskeyアクセストークンを入力してください。");
+
+          const baseUrl = normalizeMisskeyUrl(settings.instance);
+          setMisskeyStatus("Misskeyに画像をアップロードしています...");
+
+          const blob = await canvasToBlob(canvas);
+          const file = await uploadMisskeyFile(baseUrl, settings.token, blob, settings.sensitive);
+
+          setMisskeyStatus("Misskeyにノートを投稿しています...");
+          const result = await createMisskeyNote(baseUrl, settings, file.id);
+          const note = result.createdNote || result;
+          const noteUrl = note && note.id ? `${baseUrl}/notes/${note.id}` : baseUrl;
+          setMisskeyStatus(`Misskeyに投稿しました: ${noteUrl}`);
+        } catch (error) {
+          console.error(error);
+          setMisskeyStatus(`Misskey投稿に失敗しました: ${error.message || error}`, true);
+        }
+      };
+
+      const saveMisskeySettings = () => {
+        const settings = getMisskeySettings();
+        try {
+          localStorage.setItem(MISSKEY_STORAGE_KEY, JSON.stringify({
+            enabled: settings.enabled,
+            instance: settings.instance,
+            text: settings.text,
+            visibility: settings.visibility,
+            sensitive: settings.sensitive,
+          }));
+        } catch (error) {
+          console.warn("Failed to save Misskey settings", error);
+        }
+      };
+
+      const restoreMisskeySettings = () => {
+        try {
+          const settings = JSON.parse(localStorage.getItem(MISSKEY_STORAGE_KEY) || "{}");
+          if (typeof settings.enabled === "boolean") {
+            document.getElementById("misskey-enabled").checked = settings.enabled;
+          }
+          if (settings.instance) document.getElementById("misskey-instance").value = settings.instance;
+          if (typeof settings.text === "string") document.getElementById("misskey-text").value = settings.text;
+          if (settings.visibility) document.getElementById("misskey-visibility").value = settings.visibility;
+          if (typeof settings.sensitive === "boolean") {
+            document.getElementById("misskey-sensitive").checked = settings.sensitive;
+          }
+        } catch (error) {
+          console.warn("Failed to restore Misskey settings", error);
+        }
       };
 
       window.addEventListener("DOMContentLoaded", () => {
@@ -123,12 +356,21 @@
           event.preventDefault();
           window.appneoStart();
         });
+
+        document.getElementById("misskey-miauth-start").addEventListener("click", startMisskeyMiAuth);
+        document.getElementById("misskey-miauth-check").addEventListener("click", checkMisskeyMiAuth);
+
+        restoreMisskeySettings();
+        document.querySelectorAll("[data-misskey-setting]").forEach((input) => {
+          input.addEventListener("change", saveMisskeySettings);
+          input.addEventListener("input", saveMisskeySettings);
+        });
       });
     </script>
   </head>
   <body>
     <main>
-      <h1>appneo Local Test</h1>
+      <h1>appneo Local Test misskey投稿つき</h1>
 
       <form class="test-panel" action="./" method="post">
         <p class="note">
@@ -142,6 +384,46 @@
           <input type="number" name="pich" min="50" max="2000" value="300">
           <input id="start-appneo" type="button" value="お絵かきする">
         </div>
+
+        <section class="misskey-panel" aria-label="Misskey連携">
+          <label>
+            <span>
+              <input id="misskey-enabled" type="checkbox" data-misskey-setting>
+              投稿した画像をMisskeyにも投稿する
+            </span>
+          </label>
+          <label>
+            MisskeyインスタンスURL
+            <input id="misskey-instance" type="url" value="https://misskey.io" placeholder="https://misskey.io" data-misskey-setting>
+          </label>
+          <label>
+            アクセストークン
+            <input id="misskey-token" type="password" autocomplete="off" placeholder="write:notes と write:drive 権限が必要">
+          </label>
+          <div class="test-row">
+            <input id="misskey-miauth-start" type="button" value="MiAuthで認証">
+            <input id="misskey-miauth-check" type="button" value="認証確認">
+          </div>
+          <label>
+            本文
+            <textarea id="misskey-text" data-misskey-setting>PaintBBS NEOから投稿</textarea>
+          </label>
+          <div class="test-row">
+            公開範囲
+            <select id="misskey-visibility" data-misskey-setting>
+              <option value="public">public</option>
+              <option value="home">home</option>
+              <option value="followers">followers</option>
+            </select>
+            <label>
+              <span>
+                <input id="misskey-sensitive" type="checkbox" data-misskey-setting>
+                閲覧注意
+              </span>
+            </label>
+          </div>
+          <div id="misskey-status" class="status" aria-live="polite"></div>
+        </section>
       </form>
 
       <applet-dummy name="paintbbs" width="400" height="460">
