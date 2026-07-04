@@ -12,6 +12,11 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 
 ## 履歴
 
+### [2026/07/04] v0.1.9
+
+- 単体のカラーピッカー追加
+- 手ブレの初期値を0に
+
 ### [2026/06/22] v0.1.8
 
 - カラーピッカーからグラデーションを作る機能追加
