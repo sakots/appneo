@@ -767,6 +767,12 @@
             <textarea class="appneo-textarea" name="setr" rows="2" cols="16" onmouseover="this.select()"></textarea>
           </fieldset>
         </form>
+        <form name="colorPick">
+          <fieldset>
+            <legend>COLOR PICKER</legend>
+            <input class="appneo-color colorPicker" type="color" id="neo-colorPicker" name="colorPick" value="#000000" oninput="Neo.setColor(this.value)">
+          </fieldset>
+        </form>
         <form name="grad">
           <fieldset>
             <legend>GRADATION</legend>
