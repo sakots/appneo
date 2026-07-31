@@ -10,7 +10,18 @@
 javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/appneo.js?'+Date.now();document.head.appendChild(s);})();
 ```
 
+PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
+読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。
+
+```javascript
+window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
+```
+
 ## 履歴
+
+### [2026/07/04] v0.1.10
+
+- neoのURL変更
 
 ### [2026/07/04] v0.1.9
 

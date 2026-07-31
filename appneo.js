@@ -3,10 +3,11 @@
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.9";
+  const APPNEO_VERSION = "v0.1.10";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
+  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
   const DEFAULT_APPLET_WIDTH = 400;
   const DEFAULT_APPLET_HEIGHT = 460;
   const DEFAULT_CANVAS_SIZE = 300;
@@ -62,26 +63,7 @@
     "Default,000000,FFFFFF,B47575,888888,FA9696,C096C0,FFB6FF,8080FF,25C7C9,E7E58D,E7962D,99CB7B,FCECE2,F9DDCF",
   ];
 
-  const getScriptBase = () => {
-    const script = document.currentScript || [...document.scripts].find((s) => {
-      return s.src && /(?:^|\/)appneo\.js(?:[?#].*)?$/.test(s.src);
-    });
-
-    if (script && script.src) {
-      return new URL(".", script.src).href;
-    }
-
-    return new URL("./", location.href).href;
-  };
-
-  const APP_BASE = window.APPNEO_BASE || getScriptBase();
-  const NEO_BASES = window.APPNEO_NEO_BASE
-    ? [window.APPNEO_NEO_BASE]
-    : [
-        new URL("neo/dist/", APP_BASE).href,
-        new URL("dist/", APP_BASE).href,
-        APP_BASE,
-      ];
+  const NEO_BASE = window.APPNEO_NEO_BASE || DEFAULT_NEO_BASE;
 
   const withCacheBust = (url) => {
     const next = new URL(url, location.href);
@@ -674,16 +656,12 @@
   const ensureNeo = () => {
     if (!state.loading) {
       state.loading = (async () => {
-        const errors = [];
-        for (const base of NEO_BASES) {
-          try {
-            await loadNeoFrom(base);
-            return;
-          } catch (error) {
-            errors.push(base + " : " + (error && error.message ? error.message : error));
-          }
+        try {
+          await loadNeoFrom(NEO_BASE);
+        } catch (error) {
+          const message = error && error.message ? error.message : error;
+          throw new Error("Could not load neo.js/neo.css.\n" + NEO_BASE + " : " + message);
         }
-        throw new Error("Could not load neo.js/neo.css.\n" + errors.join("\n"));
       })();
     }
     return state.loading;

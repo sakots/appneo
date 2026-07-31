@@ -110,7 +110,6 @@
     </style>
     <script>
       window.APPNEO_AUTO_START = false;
-      window.APPNEO_NEO_BASE = new URL("../neo/dist/", location.href).href;
 
       document.paintBBSCallback = function (message) {
         if (message !== "check" || !window.Neo || !Neo.painter) return true;
@@ -374,7 +373,7 @@
 
       <form class="test-panel" action="./" method="post">
         <p class="note">
-          This page loads <code>../appneo.js</code> and starts PaintBBS NEO with local files.
+          This page loads <code>../appneo.js</code> and starts PaintBBS NEO from its configured URL.
         </p>
 
         <div class="test-row">
