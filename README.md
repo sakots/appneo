@@ -4,16 +4,16 @@
 
 ## 使い方
 
-ブックマークレットとして以下を実行すると、お絵かきアプレットが読み込まれます。
+[`dist/bookmarklet-loader.txt`](dist/bookmarklet-loader.txt) の1行をブックマークのURL欄に登録してください。GitHub APIで最新コミットを確認してから、jsDelivr経由でそのコミットに固定したappneoを読み込みます。
 
 ```javascript
-javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/appneo/main/appneo.js?'+Date.now();document.head.appendChild(s);})();
+javascript:(async()=>{const id='appneo-loader';if(document.getElementById(id))return;let v='main';try{const r=await fetch('https://api.github.com/repos/sakots/appneo/commits/main',{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();if(/^[0-9a-f]{40}$/.test(j.sha))v=j.sha}}catch{}const s=document.createElement('script');s.id=id;s.charset='UTF-8';s.src='https://cdn.jsdelivr.net/gh/sakots/appneo@'+v+'/dist/appneo.js'+(v==='main'?'?t='+Date.now():'');s.onerror=()=>{s.remove();alert('appneoの読み込みに失敗しました。')};(document.head||document.documentElement).appendChild(s)})()
 ```
 
-ブックマークレットはGitHubの `main` ブランチにある `appneo.js` を直接読み込みます。変更を配布するには、ビルド済みの `appneo.js` をGitHubへ反映してください。
+GitHub APIに接続できない場合は、jsDelivr上の `main` ブランチをキャッシュ回避パラメータ付きで読み込みます。変更を配布するには、ビルド済みの `dist/appneo.js` と `dist/bookmarklet-loader.txt` をGitHubへ反映してください。
 
 PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
-読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `npm run build` で配布用の `appneo.js` を生成します。
+読み込み元を変更する場合は、`dist/appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `npm run build` で配布用の `dist/appneo.js` を生成します。
 
 ```javascript
 window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
@@ -27,7 +27,7 @@ npm run typecheck
 npm run build
 ```
 
-`src/appneo.ts` を編集し、`npm run build` で配布用の `appneo.js` を更新します。
+`src/appneo.ts` を編集し、`npm run build` で配布用の `dist/appneo.js` と `dist/bookmarklet-loader.txt` を更新します。
 
 ## 履歴
 
