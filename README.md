@@ -11,7 +11,7 @@ javascript:(function(){const s=document.createElement('script');s.charset='UTF-8
 ```
 
 PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
-読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `appneo.ts` で管理しており、変更後は `npm run build` で配布用の `appneo.js` を生成します。
+読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `npm run build` で配布用の `appneo.js` を生成します。
 
 ```javascript
 window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
@@ -25,9 +25,14 @@ npm run typecheck
 npm run build
 ```
 
-`appneo.ts` を編集し、`npm run build` で配布用の `appneo.js` を更新します。
+`src/appneo.ts` を編集し、`npm run build` で配布用の `appneo.js` を更新します。
 
 ## 履歴
+
+### [2026/08/20] v0.2.0
+
+- typescriptに移行
+- neoのURL変更
 
 ### [2026/07/04] v0.1.10
 

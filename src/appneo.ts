@@ -1,4 +1,4 @@
-// appneo.ts
+// src/appneo.ts
 // Starts PaintBBS NEO from a futaba drawing page.
 // PaintBBS NEO is loaded dynamically, so its public API is declared as a
 // runtime-provided global.
@@ -19,7 +19,8 @@ interface Document {
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
-  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
+  const DEFAULT_NEO_BASE =
+    "https://raw.githubusercontent.com/funige/neo/master/dist/";
   const DEFAULT_APPLET_WIDTH = 400;
   const DEFAULT_APPLET_HEIGHT = 460;
   const DEFAULT_CANVAS_SIZE = 300;

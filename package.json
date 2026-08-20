@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "tsc && prettier --write appneo.js",
-    "format": "prettier --write appneo.ts appneo.js appneoLocalTest/index.html package.json tsconfig.json",
+    "format": "prettier --write src/appneo.ts appneo.js appneoLocalTest/index.html package.json tsconfig.json",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
