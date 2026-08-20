@@ -1,0 +1,13 @@
+{
+  "name": "appneo",
+  "private": true,
+  "scripts": {
+    "build": "tsc && prettier --write appneo.js",
+    "format": "prettier --write appneo.ts appneo.js appneoLocalTest/index.html package.json tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>appneo Local Test</title>
     <style>
       body {
@@ -169,7 +169,9 @@
 
       const normalizeMisskeyUrl = (value) => {
         const source = value || "https://misskey.io";
-        const withScheme = /^https?:\/\//i.test(source) ? source : `https://${source}`;
+        const withScheme = /^https?:\/\//i.test(source)
+          ? source
+          : `https://${source}`;
         const url = new URL(withScheme);
         return url.origin;
       };
@@ -187,9 +189,10 @@
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
         if (!response.ok) {
-          const message = data.error && data.error.message
-            ? data.error.message
-            : `HTTP ${response.status}`;
+          const message =
+            data.error && data.error.message
+              ? data.error.message
+              : `HTTP ${response.status}`;
           throw new Error(message);
         }
         return data;
@@ -201,13 +204,17 @@
         const values = new Uint32Array(4);
         if (window.crypto && crypto.getRandomValues) {
           crypto.getRandomValues(values);
-          return [...values].map((value) => value.toString(16).padStart(8, "0")).join("");
+          return [...values]
+            .map((value) => value.toString(16).padStart(8, "0"))
+            .join("");
         }
         return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
       };
 
       const getMiAuthBaseUrl = () => {
-        return normalizeMisskeyUrl(document.getElementById("misskey-instance").value.trim());
+        return normalizeMisskeyUrl(
+          document.getElementById("misskey-instance").value.trim(),
+        );
       };
 
       const startMisskeyMiAuth = () => {
@@ -215,15 +222,26 @@
           const baseUrl = getMiAuthBaseUrl();
           misskeyMiAuthSessionId = createMiAuthSessionId();
 
-          const authUrl = new URL(`${baseUrl}/miauth/${misskeyMiAuthSessionId}`);
+          const authUrl = new URL(
+            `${baseUrl}/miauth/${misskeyMiAuthSessionId}`,
+          );
           authUrl.searchParams.set("name", "appneoLocalTest");
           authUrl.searchParams.set("permission", "write:notes,write:drive");
 
-          window.open(authUrl.href, "appneo-misskey-miauth", "noopener,noreferrer");
-          setMisskeyStatus("Misskeyの認証画面を開きました。許可したら「認証確認」を押してください。");
+          window.open(
+            authUrl.href,
+            "appneo-misskey-miauth",
+            "noopener,noreferrer",
+          );
+          setMisskeyStatus(
+            "Misskeyの認証画面を開きました。許可したら「認証確認」を押してください。",
+          );
         } catch (error) {
           console.error(error);
-          setMisskeyStatus(`MiAuth開始に失敗しました: ${error.message || error}`, true);
+          setMisskeyStatus(
+            `MiAuth開始に失敗しました: ${error.message || error}`,
+            true,
+          );
         }
       };
 
@@ -235,15 +253,19 @@
 
           const baseUrl = getMiAuthBaseUrl();
           setMisskeyStatus("Misskey認証を確認しています...");
-          const response = await fetch(`${baseUrl}/api/miauth/${misskeyMiAuthSessionId}/check`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+          const response = await fetch(
+            `${baseUrl}/api/miauth/${misskeyMiAuthSessionId}/check`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: "{}",
             },
-            body: "{}",
-          });
+          );
           const data = await readApiResponse(response);
-          if (!data.token) throw new Error("認証トークンが返ってきませんでした。");
+          if (!data.token)
+            throw new Error("認証トークンが返ってきませんでした。");
 
           document.getElementById("misskey-token").value = data.token;
           document.getElementById("misskey-enabled").checked = true;
@@ -252,7 +274,10 @@
           setMisskeyStatus("Misskey認証が完了しました。このまま投稿できます。");
         } catch (error) {
           console.error(error);
-          setMisskeyStatus(`MiAuth確認に失敗しました: ${error.message || error}`, true);
+          setMisskeyStatus(
+            `MiAuth確認に失敗しました: ${error.message || error}`,
+            true,
+          );
         }
       };
 
@@ -294,35 +319,48 @@
         if (!settings.enabled) return;
 
         try {
-          if (!settings.token) throw new Error("Misskeyアクセストークンを入力してください。");
+          if (!settings.token)
+            throw new Error("Misskeyアクセストークンを入力してください。");
 
           const baseUrl = normalizeMisskeyUrl(settings.instance);
           setMisskeyStatus("Misskeyに画像をアップロードしています...");
 
           const blob = await canvasToBlob(canvas);
-          const file = await uploadMisskeyFile(baseUrl, settings.token, blob, settings.sensitive);
+          const file = await uploadMisskeyFile(
+            baseUrl,
+            settings.token,
+            blob,
+            settings.sensitive,
+          );
 
           setMisskeyStatus("Misskeyにノートを投稿しています...");
           const result = await createMisskeyNote(baseUrl, settings, file.id);
           const note = result.createdNote || result;
-          const noteUrl = note && note.id ? `${baseUrl}/notes/${note.id}` : baseUrl;
+          const noteUrl =
+            note && note.id ? `${baseUrl}/notes/${note.id}` : baseUrl;
           setMisskeyStatus(`Misskeyに投稿しました: ${noteUrl}`);
         } catch (error) {
           console.error(error);
-          setMisskeyStatus(`Misskey投稿に失敗しました: ${error.message || error}`, true);
+          setMisskeyStatus(
+            `Misskey投稿に失敗しました: ${error.message || error}`,
+            true,
+          );
         }
       };
 
       const saveMisskeySettings = () => {
         const settings = getMisskeySettings();
         try {
-          localStorage.setItem(MISSKEY_STORAGE_KEY, JSON.stringify({
-            enabled: settings.enabled,
-            instance: settings.instance,
-            text: settings.text,
-            visibility: settings.visibility,
-            sensitive: settings.sensitive,
-          }));
+          localStorage.setItem(
+            MISSKEY_STORAGE_KEY,
+            JSON.stringify({
+              enabled: settings.enabled,
+              instance: settings.instance,
+              text: settings.text,
+              visibility: settings.visibility,
+              sensitive: settings.sensitive,
+            }),
+          );
         } catch (error) {
           console.warn("Failed to save Misskey settings", error);
         }
@@ -330,15 +368,24 @@
 
       const restoreMisskeySettings = () => {
         try {
-          const settings = JSON.parse(localStorage.getItem(MISSKEY_STORAGE_KEY) || "{}");
+          const settings = JSON.parse(
+            localStorage.getItem(MISSKEY_STORAGE_KEY) || "{}",
+          );
           if (typeof settings.enabled === "boolean") {
-            document.getElementById("misskey-enabled").checked = settings.enabled;
+            document.getElementById("misskey-enabled").checked =
+              settings.enabled;
           }
-          if (settings.instance) document.getElementById("misskey-instance").value = settings.instance;
-          if (typeof settings.text === "string") document.getElementById("misskey-text").value = settings.text;
-          if (settings.visibility) document.getElementById("misskey-visibility").value = settings.visibility;
+          if (settings.instance)
+            document.getElementById("misskey-instance").value =
+              settings.instance;
+          if (typeof settings.text === "string")
+            document.getElementById("misskey-text").value = settings.text;
+          if (settings.visibility)
+            document.getElementById("misskey-visibility").value =
+              settings.visibility;
           if (typeof settings.sensitive === "boolean") {
-            document.getElementById("misskey-sensitive").checked = settings.sensitive;
+            document.getElementById("misskey-sensitive").checked =
+              settings.sensitive;
           }
         } catch (error) {
           console.warn("Failed to restore Misskey settings", error);
@@ -351,13 +398,19 @@
         width.value = getParam("w", "300");
         height.value = getParam("h", "300");
 
-        document.getElementById("start-appneo").addEventListener("click", (event) => {
-          event.preventDefault();
-          window.appneoStart();
-        });
+        document
+          .getElementById("start-appneo")
+          .addEventListener("click", (event) => {
+            event.preventDefault();
+            window.appneoStart();
+          });
 
-        document.getElementById("misskey-miauth-start").addEventListener("click", startMisskeyMiAuth);
-        document.getElementById("misskey-miauth-check").addEventListener("click", checkMisskeyMiAuth);
+        document
+          .getElementById("misskey-miauth-start")
+          .addEventListener("click", startMisskeyMiAuth);
+        document
+          .getElementById("misskey-miauth-check")
+          .addEventListener("click", checkMisskeyMiAuth);
 
         restoreMisskeySettings();
         document.querySelectorAll("[data-misskey-setting]").forEach((input) => {
@@ -373,39 +426,60 @@
 
       <form class="test-panel" action="./" method="post">
         <p class="note">
-          This page loads <code>../appneo.js</code> and starts PaintBBS NEO from its configured URL.
+          This page loads <code>../appneo.js</code> and starts PaintBBS NEO from
+          its configured URL.
         </p>
 
         <div class="test-row">
           Canvas:
-          <input type="number" name="picw" min="50" max="2000" value="300">
+          <input type="number" name="picw" min="50" max="2000" value="300" />
           x
-          <input type="number" name="pich" min="50" max="2000" value="300">
-          <input id="start-appneo" type="button" value="お絵かきする">
+          <input type="number" name="pich" min="50" max="2000" value="300" />
+          <input id="start-appneo" type="button" value="お絵かきする" />
         </div>
 
         <section class="misskey-panel" aria-label="Misskey連携">
           <label>
             <span>
-              <input id="misskey-enabled" type="checkbox" data-misskey-setting>
+              <input
+                id="misskey-enabled"
+                type="checkbox"
+                data-misskey-setting
+              />
               投稿した画像をMisskeyにも投稿する
             </span>
           </label>
           <label>
             MisskeyインスタンスURL
-            <input id="misskey-instance" type="url" value="https://misskey.io" placeholder="https://misskey.io" data-misskey-setting>
+            <input
+              id="misskey-instance"
+              type="url"
+              value="https://misskey.io"
+              placeholder="https://misskey.io"
+              data-misskey-setting
+            />
           </label>
           <label>
             アクセストークン
-            <input id="misskey-token" type="password" autocomplete="off" placeholder="write:notes と write:drive 権限が必要">
+            <input
+              id="misskey-token"
+              type="password"
+              autocomplete="off"
+              placeholder="write:notes と write:drive 権限が必要"
+            />
           </label>
           <div class="test-row">
-            <input id="misskey-miauth-start" type="button" value="1.MiAuthで認証">
-            <input id="misskey-miauth-check" type="button" value="2.認証確認">
+            <input
+              id="misskey-miauth-start"
+              type="button"
+              value="1.MiAuthで認証"
+            />
+            <input id="misskey-miauth-check" type="button" value="2.認証確認" />
           </div>
           <label>
             本文
-            <textarea id="misskey-text" data-misskey-setting>PaintBBS NEOから投稿</textarea>
+            <textarea id="misskey-text" data-misskey-setting>
+PaintBBS NEOから投稿</textarea>
           </label>
           <div class="test-row">
             公開範囲
@@ -416,7 +490,11 @@
             </select>
             <label>
               <span>
-                <input id="misskey-sensitive" type="checkbox" data-misskey-setting>
+                <input
+                  id="misskey-sensitive"
+                  type="checkbox"
+                  data-misskey-setting
+                />
                 閲覧注意
               </span>
             </label>
@@ -426,16 +504,20 @@
       </form>
 
       <applet-dummy name="paintbbs" width="400" height="460">
-        <param name="url_save" value="paintpost.php">
-        <param name="url_exit" value="./index.html">
-        <param name="thumbnail_type" value="animation">
-        <param name="neo_show_right_button" value="true">
-        <param name="neo_disable_grid_touch_move" value="true">
-        <param name="neo_disable_turn_original_glitch" value="true">
-        <param name="neo_enable_zoom_out" value="true">
+        <param name="url_save" value="paintpost.php" />
+        <param name="url_exit" value="./index.html" />
+        <param name="thumbnail_type" value="animation" />
+        <param name="neo_show_right_button" value="true" />
+        <param name="neo_disable_grid_touch_move" value="true" />
+        <param name="neo_disable_turn_original_glitch" value="true" />
+        <param name="neo_enable_zoom_out" value="true" />
       </applet-dummy>
 
-      <section class="preview-log" id="preview-log" aria-live="polite"></section>
+      <section
+        class="preview-log"
+        id="preview-log"
+        aria-live="polite"
+      ></section>
     </main>
   </body>
 </html>

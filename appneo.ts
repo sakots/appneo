@@ -1,18 +1,56 @@
-"use strict";
+// appneo.ts
+// Starts PaintBBS NEO from a futaba drawing page.
+// PaintBBS NEO is loaded dynamically, so its public API is declared as a
+// runtime-provided global.
+declare const Neo: any;
+
+interface Window {
+  [key: string]: any;
+}
+
+interface Document {
+  [key: string]: any;
+}
+
 (() => {
   "use strict";
+
   const APPNEO_VERSION = "v0.1.10";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
+
   const APPNEO_ID = "appneo-root";
   const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
   const DEFAULT_APPLET_WIDTH = 400;
   const DEFAULT_APPLET_HEIGHT = 460;
   const DEFAULT_CANVAS_SIZE = 300;
-  const state = {
+
+  type OekakiControl = HTMLInputElement | HTMLButtonElement | HTMLAnchorElement;
+  type Sizes = {
+    appletWidth: number;
+    appletHeight: number;
+    canvasWidth: number;
+    canvasHeight: number;
+  };
+  type BoardParams = {
+    url_save: string;
+    url_exit: string;
+  };
+  type PaletteEntry = {
+    name: string;
+    colors: string;
+  };
+  type AppNeoState = {
+    loading: Promise<void> | null;
+    fitManager: AppNeoFitManager | null;
+    paletteManager: AppNeoPaletteManager | null;
+  };
+
+  const state: AppNeoState = {
     loading: null,
     fitManager: null,
     paletteManager: null,
   };
+
   const DEFAULT_PALETTES = [
     "2.5R,FF406C,F13E67,E33C62,D53A5D,C73858,B93653,AB344E,9D3249,8F3044,812E3F,732C3A,652A35,572830,49262B",
     "5R,FF4455,F14152,E33E4F,D53B4C,C73849,B93546,AB3243,9D2F40,8F2C3D,81293A,732637,652334,572031,491D2E",
@@ -57,18 +95,27 @@
     "N,FFFFFF,EFEFEF,DFDFDF,CFCFCF,BFBFBF,AFAFAF,9F9F9F,8F8F8F,7F7F7F,6F6F6F,5F5F5F,4F4F4F,3F3F3F,2F2F2F",
     "Default,000000,FFFFFF,B47575,888888,FA9696,C096C0,FFB6FF,8080FF,25C7C9,E7E58D,E7962D,99CB7B,FCECE2,F9DDCF",
   ];
+
   const NEO_BASE = window.APPNEO_NEO_BASE || DEFAULT_NEO_BASE;
-  const withCacheBust = (url) => {
+
+  const withCacheBust = (url: string) => {
     const next = new URL(url, location.href);
     next.searchParams.set("appneo", APPNEO_CACHE_BUST);
     return next.href;
   };
-  const toNumber = (value, fallback) => {
+
+  const toNumber = (
+    value: string | number | null | undefined,
+    fallback: number,
+  ) => {
     const number = parseInt(String(value), 10);
     return Number.isFinite(number) && number > 0 ? number : fallback;
   };
+
   const findOekakiButton = () => {
-    const controls = [...document.querySelectorAll("input, button, a")];
+    const controls = [
+      ...document.querySelectorAll<OekakiControl>("input, button, a"),
+    ];
     return controls.find((control) => {
       const label =
         ("value" in control ? control.value : control.textContent) ||
@@ -77,8 +124,10 @@
       return /\u304a\u7d75(?:\u304b|\u63cf)\u304d\u3059\u308b/.test(label);
     });
   };
-  const setOekakiButtonLabel = (button) => {
+
+  const setOekakiButtonLabel = (button: OekakiControl | undefined) => {
     if (!button) return;
+
     const label = "お絵かきする(APPNEO)";
     if ("value" in button) {
       button.value = label;
@@ -86,12 +135,14 @@
       button.textContent = label;
     }
   };
-  const findSizeInputs = (button) => {
+
+  const findSizeInputs = (button: OekakiControl | undefined) => {
     const inputs = [...document.querySelectorAll("input")];
     const numberLikes = inputs.filter((input) => {
       const value = input.value || input.getAttribute("value") || "";
       return /^\d{2,4}$/.test(value);
     });
+
     const nearButton = button
       ? numberLikes
           .map((input) => ({
@@ -104,12 +155,14 @@
           .sort((a, b) => a.distance - b.distance)
           .map((item) => item.input)
       : numberLikes;
+
     return {
       canvasWidth: nearButton[0],
       canvasHeight: nearButton[1],
     };
   };
-  const getSizes = (button) => {
+
+  const getSizes = (button: OekakiControl | undefined): Sizes => {
     const { canvasWidth, canvasHeight } = findSizeInputs(button);
     const width = toNumber(
       canvasWidth && canvasWidth.value,
@@ -119,6 +172,7 @@
       canvasHeight && canvasHeight.value,
       DEFAULT_CANVAS_SIZE,
     );
+
     return {
       appletWidth: Math.max(width + 100, DEFAULT_APPLET_WIDTH),
       appletHeight: Math.max(height + 160, DEFAULT_APPLET_HEIGHT),
@@ -126,23 +180,31 @@
       canvasHeight: height,
     };
   };
-  const getAbsoluteBoardUrl = (value, fallback) => {
+
+  const getAbsoluteBoardUrl = (
+    value: string | null | undefined,
+    fallback: string,
+  ) => {
     return new URL(value || fallback, location.href).href;
   };
-  const getBoardParam = (name, fallback) => {
+
+  const getBoardParam = (name: string, fallback: string) => {
     const params = [...document.querySelectorAll("param[name]")];
     const param = params.find((item) => {
       return item.getAttribute("name")?.toLowerCase() === name;
     });
+
     return getAbsoluteBoardUrl(param && param.getAttribute("value"), fallback);
   };
+
   const getBoardParams = () => {
     return {
       url_save: getBoardParam("url_save", "paintpost.php"),
       url_exit: getBoardParam("url_exit", "futaba.php?mode=paintcom"),
     };
   };
-  const createPaintBbsParams = (sizes, boardParams) => {
+
+  const createPaintBbsParams = (sizes: Sizes, boardParams: BoardParams) => {
     return {
       neo_max_pch: 2048,
       neo_confirm_unload: true,
@@ -161,7 +223,8 @@
       tool_advance: true,
     };
   };
-  const configureNeoParams = (sizes, boardParams) => {
+
+  const configureNeoParams = (sizes: Sizes, boardParams: BoardParams) => {
     const singular =
       Neo.param && typeof Neo.param === "object" ? Neo.param : {};
     const plural =
@@ -185,6 +248,7 @@
         boardParams.url_exit,
       ),
     };
+
     Neo.param = {
       ...singular,
       ...plural,
@@ -192,47 +256,65 @@
     };
     Neo.params = Neo.param;
   };
-  const parsePaletteName = (entry, index) => {
+
+  const parsePaletteName = (entry: string, index: number) => {
     const match = String(entry).match(/^\s*([^,\n]+)/);
     return match ? match[1].trim() : `Palette ${index + 1}`;
   };
-  const formatColors = (source) => {
+
+  const formatColors = (source: string) => {
     return (String(source).match(/#?[0-9a-fA-F]{6}\b/g) || [])
       .slice(0, 14)
       .map((color) => "#" + color.replace("#", "").toUpperCase())
       .join("\n");
   };
-  const formatColor = (source) => {
+
+  const formatColor = (source: string) => {
     return formatColors(source).split("\n")[0] || "";
   };
-  const hex = (value) => {
+
+  const hex = (value: number) => {
     const number = Math.max(0, Math.min(255, parseInt(String(value), 10) || 0));
     return number.toString(16).padStart(2, "0").toUpperCase();
   };
-  const getBright = (color) => {
+
+  const getBright = (color: string) => {
     const r = parseInt(color.substring(1, 3), 16);
     const g = parseInt(color.substring(3, 5), 16);
     const b = parseInt(color.substring(5, 7), 16);
     return Math.max(r, g, b) < 128 ? "#FFFFFF" : "#000000";
   };
-  const createOptions = (count, selectedIndex = -1) => {
+
+  const createOptions = (count: number, selectedIndex = -1) => {
     return Array.from({ length: count }, (_, index) => {
       return `<option${index === selectedIndex ? " selected" : ""}>${index + 1}</option>`;
     }).join("");
   };
+
   class AppNeoFitManager {
-    constructor(sizes) {
+    originalWidth!: number;
+    originalHeight!: number;
+    isExpanded!: boolean;
+    target!: HTMLElement | null;
+    neoContainer!: HTMLElement | null;
+    palette!: HTMLElement | null;
+    fitExp!: HTMLElement | null;
+    fitComp!: HTMLElement | null;
+
+    constructor(sizes: Sizes) {
       this.originalWidth = sizes.appletWidth;
       this.originalHeight = sizes.appletHeight;
       this.isExpanded = false;
       this.bindGlobals();
     }
+
     bindGlobals() {
-      window.appFit = (mode) => {
+      window.appFit = (mode: number) => {
         if (mode) this.compress();
         else this.expand();
       };
     }
+
     refreshTargets() {
       this.target = document.getElementById("neo-pageView");
       this.neoContainer = document.getElementById("neo-container");
@@ -240,6 +322,7 @@
       this.fitExp = document.getElementById("appneo-fit-exp");
       this.fitComp = document.getElementById("appneo-fit-comp");
     }
+
     getClientWidth() {
       const client =
         document.compatMode && document.compatMode !== "BackCompat"
@@ -247,6 +330,7 @@
           : document.body;
       return client.clientWidth || window.innerWidth;
     }
+
     getClientHeight() {
       const client =
         document.compatMode && document.compatMode !== "BackCompat"
@@ -254,6 +338,7 @@
           : document.body;
       return client.clientHeight - 10;
     }
+
     getExpandedWidth() {
       this.refreshTargets();
       const paletteWidth = this.palette
@@ -262,23 +347,28 @@
       const availableWidth = this.getClientWidth() - paletteWidth - 48;
       return Math.max(this.originalWidth, Math.floor(availableWidth));
     }
-    setAppletSize(width, height) {
+
+    setAppletSize(width: number, height: number) {
       this.refreshTargets();
       const appletWidth = parseInt(String(width), 10);
       const appletHeight = parseInt(String(height), 10);
+
       if (window.Neo && Neo.config) {
         Neo.config.applet_width = appletWidth;
         Neo.config.applet_height = appletHeight;
       }
+
       if (this.target) {
         this.target.style.width = `${appletWidth}px`;
         this.target.style.height = `${appletHeight}px`;
       }
+
       if (this.neoContainer) {
         this.neoContainer.style.width = `${appletWidth}px`;
         this.neoContainer.style.height = `${appletHeight}px`;
       }
     }
+
     resetZoom() {
       if (window.Neo && Neo.painter) {
         Neo.painter.setZoom(1);
@@ -286,18 +376,23 @@
         Neo.painter.updateDestCanvas();
       }
     }
+
     expand() {
       if (this.isExpanded) return;
+
       const width = this.getExpandedWidth();
       const height = Math.max(this.originalHeight, this.getClientHeight());
       this.setAppletSize(width, height);
+
       if (this.fitExp) this.fitExp.style.display = "none";
       if (this.fitComp) this.fitComp.style.display = "block";
       this.isExpanded = true;
       this.resetZoom();
     }
+
     compress() {
       if (!this.isExpanded) return;
+
       this.setAppletSize(this.originalWidth, this.originalHeight);
       if (this.fitExp) this.fitExp.style.display = "block";
       if (this.fitComp) this.fitComp.style.display = "none";
@@ -305,7 +400,13 @@
       this.resetZoom();
     }
   }
+
   class AppNeoPaletteManager {
+    DynamicColor!: number;
+    customP!: number;
+    entries!: PaletteEntry[];
+    Palettes!: string[];
+
     constructor() {
       this.DynamicColor = 1;
       this.customP = 0;
@@ -318,6 +419,7 @@
       this.syncOptions();
       this.PaletteListSetColor();
     }
+
     bindGlobals() {
       window.setPalette = this.setPalette.bind(this);
       window.PaletteSave = this.PaletteSave.bind(this);
@@ -334,43 +436,53 @@
       window.PickGradColor = this.PickGradColor.bind(this);
       window.ColorPickerToGradation = this.ColorPickerToGradation.bind(this);
     }
+
     get select() {
       return document.Palette && document.Palette.select;
     }
+
     syncOptions() {
       const select = this.select;
       if (!select) return;
+
       while (select.options.length > 1) select.options[1] = null;
       this.entries.forEach((entry) => {
         select.options[select.options.length] = new Option(entry.name);
       });
       select.size = Math.min(select.options.length, 30);
     }
+
     async setPalette() {
       const select = this.select;
       if (!document.paintbbs || !select) return;
+
       const colors = this.Palettes[select.selectedIndex];
       if (colors) document.paintbbs.setColors(colors);
       await this.GetPalette();
     }
+
     async PaletteSave() {
       if (!document.paintbbs) return;
       this.Palettes[0] = String(await document.paintbbs.getColors());
       this.PaletteListSetColor();
     }
+
     async PaletteNew() {
       if (!document.paintbbs || !this.select) return;
+
       const colors = String(await document.paintbbs.getColors());
       const name = prompt("Palette name", "Palette " + ++this.customP);
       if (!name) {
         this.customP--;
         return;
       }
+
       this.Palettes.push(colors);
       this.select.options[this.select.length] = new Option(name);
       this.select.size = Math.min(this.select.length, 30);
       this.PaletteListSetColor();
     }
+
     async PaletteRenew() {
       if (!document.paintbbs || !this.select || this.select.selectedIndex < 0)
         return;
@@ -379,6 +491,7 @@
       );
       this.PaletteListSetColor();
     }
+
     PaletteDel() {
       if (!this.select || this.select.selectedIndex <= 0) return;
       const index = this.select.selectedIndex;
@@ -387,8 +500,10 @@
       this.Palettes.splice(index, 1);
       this.select.size = Math.min(this.select.length, 30);
     }
-    async P_Effect(value) {
+
+    async P_Effect(value: string | number) {
       if (!document.paintbbs) return;
+
       const v = parseInt(String(value), 10);
       const invert = v === 255;
       const colors = String(await document.paintbbs.getColors()).split("\n");
@@ -403,17 +518,21 @@
           return `#${hex(r)}${hex(g)}${hex(b)}`;
         })
         .join("\n");
+
       document.paintbbs.setColors(next);
       this.PaletteListSetColor();
     }
+
     async PaletteMatrixGet() {
       if (!document.Palette) return;
+
       const mode = document.Palette.m_m.selectedIndex;
       const textarea = document.Palette.setr;
       if (mode === 1) {
         textarea.value = `!Palette\n${String(await document.paintbbs.getColors())}\n!Matrix`;
         return;
       }
+
       const select = this.select;
       const lines = [];
       for (let i = 0; i < this.Palettes.length; i++) {
@@ -423,9 +542,11 @@
       }
       textarea.value = `${lines.join("\n")}\n!Matrix`;
     }
+
     PaletteMatrixSet() {
       if (!document.Palette) return;
-      const text = document.Palette.setr.value;
+
+      const text: string = document.Palette.setr.value;
       const entries = text
         .split(/\n(?=!)/)
         .map((entry, index) => ({
@@ -433,18 +554,22 @@
           colors: formatColors(entry),
         }))
         .filter((entry) => entry.colors);
+
       if (!entries.length) {
         alert("No matrix data.");
         return;
       }
+
       if (document.Palette.m_m.selectedIndex === 1) {
         document.paintbbs.setColors(entries[0].colors);
         return;
       }
+
       if (document.Palette.m_m.selectedIndex !== 2) {
         this.Palettes = [this.Palettes[0] || ""];
         while (this.select.options.length > 1) this.select.options[1] = null;
       }
+
       entries.forEach((entry) => {
         if (entry.name === "Palette") {
           document.paintbbs.setColors(entry.colors);
@@ -455,13 +580,16 @@
       });
       this.PaletteListSetColor();
     }
+
     PaletteMatrixHelp() {
       alert(
         "PALETTE MATRIX\nPut !PaletteName followed by 14 #RRGGBB colors.\nGET exports palettes, SET imports them.",
       );
     }
+
     async GetPalette() {
       if (!document.paintbbs || !document.grad) return;
+
       const colors = String(await document.paintbbs.getColors()).split("\n");
       const start = document.grad.p_st.selectedIndex;
       const end = document.grad.p_ed.selectedIndex;
@@ -471,23 +599,29 @@
       this.GradSelC(colors);
       this.PaletteListSetColor();
     }
+
     Change_() {
       this.SyncGradColorInputs();
     }
+
     SyncGradColorInputs() {
       if (!document.grad) return;
+
       const pairs = [
         [document.grad.pst, document.grad.pst_color],
         [document.grad.ped, document.grad.ped_color],
       ];
+
       pairs.forEach(([text, picker]) => {
         if (!text || !picker) return;
         const color = formatColor(text.value);
         if (color) picker.value = color.toLowerCase();
       });
     }
-    PickGradColor(target) {
+
+    PickGradColor(target: "start" | "end") {
       if (!document.grad) return;
+
       const text = target === "end" ? document.grad.ped : document.grad.pst;
       const picker =
         target === "end" ? document.grad.ped_color : document.grad.pst_color;
@@ -495,15 +629,22 @@
       if (text && color) text.value = color.substring(1);
       this.Change_();
     }
-    ColorPickerToGradation(colorPicker, targetName) {
+
+    ColorPickerToGradation(
+      colorPicker: HTMLInputElement | null,
+      targetName: string,
+    ) {
       const target = document.grad ? document.grad[targetName] : null;
       const color = colorPicker ? formatColor(colorPicker.value) : "";
       if (!target || !color) return;
+
       target.value = color.substring(1);
       this.Change_();
     }
-    GradSelC(colors) {
+
+    GradSelC(colors: string[]) {
       if (!document.grad) return;
+
       [document.grad.p_st, document.grad.p_ed].forEach((select) => {
         if (!select) return;
         colors.forEach((color, index) => {
@@ -514,28 +655,35 @@
         });
       });
     }
+
     ChangeGrad() {
       if (!document.grad || !document.paintbbs) return;
+
       const start = formatColors(document.grad.pst.value).split("\n")[0];
       const end = formatColors(document.grad.ped.value).split("\n")[0];
       if (!start || !end) return;
+
       const sr = parseInt(start.substring(1, 3), 16);
       const sg = parseInt(start.substring(3, 5), 16);
       const sb = parseInt(start.substring(5, 7), 16);
       const er = parseInt(end.substring(1, 3), 16);
       const eg = parseInt(end.substring(3, 5), 16);
       const eb = parseInt(end.substring(5, 7), 16);
+
       const colors = Array.from({ length: 14 }, (_, index) => {
         const ratio = index / 13;
         return `#${hex(sr + (er - sr) * ratio)}${hex(sg + (eg - sg) * ratio)}${hex(sb + (eb - sb) * ratio)}`;
       }).join("\n");
+
       document.paintbbs.setColors(colors);
       this.GradSelC(colors.split("\n"));
       this.PaletteListSetColor();
     }
+
     PaletteListSetColor() {
       const select = this.select;
       if (!select) return;
+
       for (let i = 1; i < select.options.length; i++) {
         const colors = (this.Palettes[i] || "").split("\n");
         const background = colors[4] || colors.find(Boolean);
@@ -545,11 +693,13 @@
       }
     }
   }
-  const loadStyle = (href) => {
+
+  const loadStyle = (href: string): Promise<void> => {
     const existing = [...document.styleSheets].some(
       (sheet) => sheet.href === href,
     );
     if (existing) return Promise.resolve();
+
     return new Promise((resolve, reject) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -562,8 +712,10 @@
       document.head.appendChild(link);
     });
   };
-  const loadScript = (src) => {
+
+  const loadScript = (src: string): Promise<void> => {
     if (window.Neo) return Promise.resolve();
+
     const existing = [...document.scripts].find((script) => script.src === src);
     if (existing) {
       return new Promise((resolve, reject) => {
@@ -575,6 +727,7 @@
         );
       });
     }
+
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
@@ -587,12 +740,14 @@
       document.head.appendChild(script);
     });
   };
-  const loadNeoFrom = async (base) => {
+
+  const loadNeoFrom = async (base: string): Promise<void> => {
     await loadStyle(withCacheBust(new URL("neo.css", base).href));
     await loadScript(withCacheBust(new URL("neo.js", base).href));
     if (!window.Neo)
       throw new Error("Neo was not defined by " + base + "neo.js");
   };
+
   const ensureNeo = () => {
     if (!state.loading) {
       state.loading = (async () => {
@@ -609,11 +764,14 @@
     }
     return state.loading;
   };
+
   const removeCurrentNeo = () => {
     const oldRoot = document.getElementById(APPNEO_ID);
     if (oldRoot) oldRoot.remove();
+
     const oldNeo = document.getElementById("NEO");
     if (oldNeo) oldNeo.remove();
+
     if (window.Neo) {
       Neo.painter = null;
       Neo.container = null;
@@ -628,9 +786,11 @@
       Neo.toolButtons = [];
       Neo.reserveControls = [];
     }
+
     state.fitManager = null;
     state.paletteManager = null;
   };
+
   const createPalettePanel = () => {
     return `
       <div class="appneo-palette" id="appneo-dyntools">
@@ -710,11 +870,13 @@
       </div>
     `;
   };
-  const createApplet = (sizes) => {
+
+  const createApplet = (sizes: Sizes) => {
     const root = document.createElement("section");
     root.id = APPNEO_ID;
     root.style.margin = "12px auto";
     root.style.width = "fit-content";
+
     root.innerHTML = `
       <style>
         #${APPNEO_ID} .appneo-container {
@@ -772,16 +934,20 @@
         ${createPalettePanel()}
       </div>
     `;
+
     return root;
   };
-  const setStatus = (message) => {
+
+  const setStatus = (message: string) => {
     const status = document.getElementById("appneo-status");
     if (status) status.textContent = message;
   };
-  const startNeo = async (button) => {
+
+  const startNeo = async (button: OekakiControl | undefined): Promise<void> => {
     const sizes = getSizes(button);
     const boardParams = getBoardParams();
     removeCurrentNeo();
+
     const root = createApplet(sizes);
     const anchor = button ? button.closest("form, table, center") : null;
     if (anchor) {
@@ -789,10 +955,12 @@
     } else {
       document.body.insertBefore(root, document.body.firstChild);
     }
+
     setStatus("Loading PaintBBS NEO files...");
     await ensureNeo();
     setStatus("Initializing PaintBBS NEO...");
     configureNeoParams(sizes, boardParams);
+
     if (window.Neo && Neo.init()) {
       Neo.start();
       state.fitManager = new AppNeoFitManager(sizes);
@@ -804,8 +972,10 @@
       setStatus("Failed to start PaintBBS NEO.");
     }
   };
+
   const bind = () => {
     window.appneoStart = () => startNeo(findOekakiButton());
+
     if (
       !/^https:\/\/.*\.2chan\.net\/[^/?#]+\/(?:futaba|\d+)\.htm(?:[?#].*)?$/.test(
         location.href,
@@ -813,8 +983,10 @@
     ) {
       return;
     }
+
     const button = findOekakiButton();
     if (!button || button.dataset.appneoBound === "true") return;
+
     button.dataset.appneoBound = "true";
     setOekakiButtonLabel(button);
     button.addEventListener(
@@ -829,6 +1001,7 @@
       },
       true,
     );
+
     if (window.APPNEO_AUTO_START !== false) {
       startNeo(button).catch((error) => {
         console.error(error);
@@ -836,6 +1009,7 @@
       });
     }
   };
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bind, { once: true });
   } else {
