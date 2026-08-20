@@ -7,8 +7,10 @@
 ブックマークレットとして以下を実行すると、お絵かきアプレットが読み込まれます。
 
 ```javascript
-javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/appneo.js?'+Date.now();document.head.appendChild(s);})();
+javascript:(function(){const s=document.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/appneo/main/appneo.js?'+Date.now();document.head.appendChild(s);})();
 ```
+
+ブックマークレットはGitHubの `main` ブランチにある `appneo.js` を直接読み込みます。変更を配布するには、ビルド済みの `appneo.js` をGitHubへ反映してください。
 
 PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
 読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `npm run build` で配布用の `appneo.js` を生成します。
