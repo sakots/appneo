@@ -1,16 +1,24 @@
 "use strict";
 (() => {
   "use strict";
-  const APPNEO_VERSION = "v0.1.10";
+  const APPNEO_VERSION = "v0.2.1";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
   const APPNEO_ID = "appneo-root";
-  const DEFAULT_NEO_BASE =
-    "https://raw.githubusercontent.com/funige/neo/master/dist/";
+  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
+  const NEO_GITHUB_REPOSITORY = "funige/neo";
+  const NEO_GITHUB_BRANCH = "master";
+  const NEO_LATEST_COMMIT_URL = `https://api.github.com/repos/${NEO_GITHUB_REPOSITORY}/commits/${NEO_GITHUB_BRANCH}`;
+  const NEO_JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/${NEO_GITHUB_REPOSITORY}`;
   const DEFAULT_APPLET_WIDTH = 400;
   const DEFAULT_APPLET_HEIGHT = 460;
   const DEFAULT_CANVAS_SIZE = 300;
   const state = {
     loading: null,
+    neoBaseUrl: new URL(
+      window.APPNEO_NEO_BASE || DEFAULT_NEO_BASE,
+      location.href,
+    ).href,
+    neoBaseUrlPromise: null,
     fitManager: null,
     paletteManager: null,
   };
@@ -58,7 +66,6 @@
     "N,FFFFFF,EFEFEF,DFDFDF,CFCFCF,BFBFBF,AFAFAF,9F9F9F,8F8F8F,7F7F7F,6F6F6F,5F5F5F,4F4F4F,3F3F3F,2F2F2F",
     "Default,000000,FFFFFF,B47575,888888,FA9696,C096C0,FFB6FF,8080FF,25C7C9,E7E58D,E7962D,99CB7B,FCECE2,F9DDCF",
   ];
-  const NEO_BASE = window.APPNEO_NEO_BASE || DEFAULT_NEO_BASE;
   const withCacheBust = (url) => {
     const next = new URL(url, location.href);
     next.searchParams.set("appneo", APPNEO_CACHE_BUST);
@@ -594,16 +601,51 @@
     if (!window.Neo)
       throw new Error("Neo was not defined by " + base + "neo.js");
   };
+  const resolveLatestNeoBaseUrl = () => {
+    if (state.neoBaseUrlPromise) return state.neoBaseUrlPromise;
+    state.neoBaseUrlPromise = (async () => {
+      if (window.APPNEO_NEO_BASE) return state.neoBaseUrl;
+      try {
+        const response = await fetch(NEO_LATEST_COMMIT_URL, {
+          cache: "no-store",
+          credentials: "omit",
+          headers: { Accept: "application/vnd.github+json" },
+          referrerPolicy: "no-referrer",
+        });
+        if (!response.ok) {
+          throw new Error("GitHub API: " + response.status);
+        }
+        const data = await response.json();
+        const sha =
+          data && typeof data === "object" && "sha" in data ? data.sha : null;
+        if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) {
+          throw new Error(
+            "GitHub APIからNEOのコミットSHAを取得できませんでした。",
+          );
+        }
+        state.neoBaseUrl = `${NEO_JSDELIVR_BASE}@${sha}/dist/`;
+      } catch (error) {
+        console.warn(
+          "appneo: 最新のPaintBBS NEOを取得できないため既定の配信URLを使用します。",
+          error,
+        );
+      }
+      return state.neoBaseUrl;
+    })();
+    return state.neoBaseUrlPromise;
+  };
   const ensureNeo = () => {
     if (!state.loading) {
       state.loading = (async () => {
+        let base = state.neoBaseUrl;
         try {
-          await loadNeoFrom(NEO_BASE);
+          base = await resolveLatestNeoBaseUrl();
+          await loadNeoFrom(base);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error);
           throw new Error(
-            "Could not load neo.js/neo.css.\n" + NEO_BASE + " : " + message,
+            "Could not load neo.js/neo.css.\n" + base + " : " + message,
           );
         }
       })();
