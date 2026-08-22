@@ -15,7 +15,7 @@ GitHub APIに接続できない場合は、jsDelivr上の `main` ブランチを
 PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
 PaintBBS NEOは起動時に `funige/neo` の最新コミットを確認し、jsDelivr経由でそのコミットの `dist/neo.js` と `dist/neo.css` を読み込みます。GitHub APIへ接続できない場合は `https://oekakibbs.moe/apps/neo/` へフォールバックします。
 
-読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `npm run build` で配布用の `appneo.js` を生成します。
+読み込み元を変更する場合は、`appneo.js` を読み込む前に `window.APPNEO_NEO_BASE` を設定してください。実装は `src/appneo.ts` で管理しており、変更後は `pnpm run build` で配布用の `appneo.js` を生成します。
 
 ```javascript
 window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
@@ -24,12 +24,12 @@ window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
 ## 開発
 
 ```sh
-npm install
-npm run typecheck
-npm run build
+pnpm install
+pnpm run typecheck
+pnpm run build
 ```
 
-`src/appneo.ts` を編集し、`npm run build` で配布用の `appneo.js` と `bookmarklet-loader.txt` を更新します。
+`src/appneo.ts` を編集し、`pnpm run build` で配布用の `appneo.js` と `bookmarklet-loader.txt` を更新します。
 
 ## 履歴
 

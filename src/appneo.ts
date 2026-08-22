@@ -15,7 +15,7 @@ interface Document {
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.1.10";
+  const APPNEO_VERSION = "v0.2.1";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";

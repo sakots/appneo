@@ -1,6 +1,7 @@
 {
   "name": "appneo",
   "private": true,
+  "packageManager": "pnpm@11.15.1",
   "scripts": {
     "build": "tsc && prettier --write appneo.js && node scripts/build-bookmarklet-loader.mjs",
     "format": "prettier --write src/appneo.ts scripts/build-bookmarklet-loader.mjs appneoLocalTest/index.html package.json tsconfig.json",
