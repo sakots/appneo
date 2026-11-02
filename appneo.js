@@ -1,7 +1,7 @@
 "use strict";
 (() => {
   "use strict";
-  const APPNEO_VERSION = "v0.2.1";
+  const APPNEO_VERSION = "v0.3.0";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
   const APPNEO_ID = "appneo-root";
   const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
@@ -230,87 +230,141 @@
   };
   class AppNeoFitManager {
     constructor(sizes) {
+      this.isExpanded = false;
+      this.placeholder = null;
+      this.scrollX = 0;
+      this.scrollY = 0;
+      this.overflowStyles = [];
+      this.resizeObserver = null;
+      this.resizeFrame = 0;
+      this.resizeToStage = () => {
+        this.resizeFrame = 0;
+        if (!this.isExpanded) return;
+        const container = document.getElementById("neo-container");
+        if (!container) return;
+        // Keep NEO's controls usable; smaller viewports scroll inside the stage.
+        const width = Math.max(
+          DEFAULT_APPLET_WIDTH,
+          this.stage.clientWidth -
+            (container.offsetWidth - container.clientWidth),
+        );
+        const height = Math.max(
+          DEFAULT_APPLET_HEIGHT,
+          this.stage.clientHeight -
+            (container.offsetHeight - container.clientHeight),
+        );
+        if (
+          container.style.width === `${width}px` &&
+          container.style.height === `${height}px`
+        )
+          return;
+        this.setAppletSize(width, height);
+        this.resizeCanvas();
+      };
+      this.scheduleResize = () => {
+        if (!this.resizeFrame) {
+          this.resizeFrame = requestAnimationFrame(this.resizeToStage);
+        }
+      };
+      this.onKeyDown = (event) => {
+        if (event.key === "Escape" && !event.isComposing) {
+          event.preventDefault();
+          this.compress();
+        }
+      };
       this.originalWidth = sizes.appletWidth;
       this.originalHeight = sizes.appletHeight;
-      this.isExpanded = false;
+      this.root = document.getElementById(APPNEO_ID);
+      this.stage = document.getElementById("appneo-applet");
+      this.button = document.getElementById("appneo-fit-button");
       this.bindGlobals();
     }
     bindGlobals() {
-      window.appFit = (mode) => {
-        if (mode) this.compress();
+      window.appFit = () => {
+        if (this.isExpanded) this.compress();
         else this.expand();
       };
     }
-    refreshTargets() {
-      this.target = document.getElementById("neo-pageView");
-      this.neoContainer = document.getElementById("neo-container");
-      this.palette = document.getElementById("appneo-dyntools");
-      this.fitExp = document.getElementById("appneo-fit-exp");
-      this.fitComp = document.getElementById("appneo-fit-comp");
-    }
-    getClientWidth() {
-      const client =
-        document.compatMode && document.compatMode !== "BackCompat"
-          ? document.documentElement
-          : document.body;
-      return client.clientWidth || window.innerWidth;
-    }
-    getClientHeight() {
-      const client =
-        document.compatMode && document.compatMode !== "BackCompat"
-          ? document.documentElement
-          : document.body;
-      return client.clientHeight - 10;
-    }
-    getExpandedWidth() {
-      this.refreshTargets();
-      const paletteWidth = this.palette
-        ? this.palette.getBoundingClientRect().width
-        : 0;
-      const availableWidth = this.getClientWidth() - paletteWidth - 48;
-      return Math.max(this.originalWidth, Math.floor(availableWidth));
-    }
     setAppletSize(width, height) {
-      this.refreshTargets();
-      const appletWidth = parseInt(String(width), 10);
-      const appletHeight = parseInt(String(height), 10);
       if (window.Neo && Neo.config) {
-        Neo.config.applet_width = appletWidth;
-        Neo.config.applet_height = appletHeight;
+        Neo.config.applet_width = width;
+        Neo.config.applet_height = height;
       }
-      if (this.target) {
-        this.target.style.width = `${appletWidth}px`;
-        this.target.style.height = `${appletHeight}px`;
-      }
-      if (this.neoContainer) {
-        this.neoContainer.style.width = `${appletWidth}px`;
-        this.neoContainer.style.height = `${appletHeight}px`;
+      for (const id of ["neo-pageView", "neo-container"]) {
+        const element = document.getElementById(id);
+        if (element) {
+          element.style.width = `${width}px`;
+          element.style.height = `${height}px`;
+        }
       }
     }
-    resetZoom() {
-      if (window.Neo && Neo.painter) {
-        Neo.painter.setZoom(1);
-        Neo.resizeCanvas();
-        Neo.painter.updateDestCanvas();
-      }
+    resizeCanvas() {
+      if (window.Neo && Neo.painter) Neo.resizeCanvas();
+    }
+    updateButton() {
+      this.button.value = this.isExpanded ? "FIT解除" : "← FIT →";
+      this.button.title = this.isExpanded
+        ? "元の表示に戻す（Esc）"
+        : "画面いっぱいの作業モードにする";
+      this.button.setAttribute("aria-pressed", String(this.isExpanded));
     }
     expand() {
       if (this.isExpanded) return;
-      const width = this.getExpandedWidth();
-      const height = Math.max(this.originalHeight, this.getClientHeight());
-      this.setAppletSize(width, height);
-      if (this.fitExp) this.fitExp.style.display = "none";
-      if (this.fitComp) this.fitComp.style.display = "block";
+      this.scrollX = window.scrollX;
+      this.scrollY = window.scrollY;
+      const rect = this.root.getBoundingClientRect();
+      const style = getComputedStyle(this.root);
+      this.placeholder = document.createElement("div");
+      this.placeholder.style.width = `${rect.width}px`;
+      this.placeholder.style.height = `${rect.height}px`;
+      this.placeholder.style.margin = style.margin;
+      this.root.before(this.placeholder);
+      // Escape table layouts and ancestor clipping on the host page.
+      document.body.appendChild(this.root);
+      this.root.classList.add("appneo-expanded");
+      this.overflowStyles = [document.documentElement, document.body].map(
+        (element) => ({
+          element,
+          value: element.style.getPropertyValue("overflow"),
+          priority: element.style.getPropertyPriority("overflow"),
+        }),
+      );
+      for (const { element } of this.overflowStyles) {
+        element.style.setProperty("overflow", "hidden", "important");
+      }
       this.isExpanded = true;
-      this.resetZoom();
+      this.updateButton();
+      this.resizeToStage();
+      this.resizeObserver = new ResizeObserver(this.scheduleResize);
+      this.resizeObserver.observe(this.stage);
+      document.addEventListener("keydown", this.onKeyDown);
+      this.button.focus({ preventScroll: true });
     }
     compress() {
       if (!this.isExpanded) return;
-      this.setAppletSize(this.originalWidth, this.originalHeight);
-      if (this.fitExp) this.fitExp.style.display = "block";
-      if (this.fitComp) this.fitComp.style.display = "none";
       this.isExpanded = false;
-      this.resetZoom();
+      this.resizeObserver?.disconnect();
+      this.resizeObserver = null;
+      cancelAnimationFrame(this.resizeFrame);
+      this.resizeFrame = 0;
+      document.removeEventListener("keydown", this.onKeyDown);
+      this.root.classList.remove("appneo-expanded");
+      this.placeholder?.replaceWith(this.root);
+      this.placeholder = null;
+      for (const { element, value, priority } of this.overflowStyles) {
+        if (value) element.style.setProperty("overflow", value, priority);
+        else element.style.removeProperty("overflow");
+      }
+      this.overflowStyles = [];
+      this.setAppletSize(this.originalWidth, this.originalHeight);
+      this.updateButton();
+      this.resizeCanvas();
+      this.button.focus({ preventScroll: true });
+      window.scrollTo({
+        left: this.scrollX,
+        top: this.scrollY,
+        behavior: "instant",
+      });
     }
   }
   class AppNeoPaletteManager {
@@ -653,6 +707,7 @@
     return state.loading;
   };
   const removeCurrentNeo = () => {
+    state.fitManager?.compress();
     const oldRoot = document.getElementById(APPNEO_ID);
     if (oldRoot) oldRoot.remove();
     const oldNeo = document.getElementById("NEO");
@@ -678,13 +733,9 @@
     return `
       <div class="appneo-palette" id="appneo-dyntools">
         <form name="Palette">
-          <fieldset id="appneo-fit-exp">
+          <fieldset>
             <legend>FIT!</legend>
-            <input class="appneo-button" type="button" value="← FIT →" onclick="appFit(0)">
-          </fieldset>
-          <fieldset id="appneo-fit-comp" style="display:none;">
-            <legend>FIT!</legend>
-            <input class="appneo-button" type="button" value="→ FIT ←" onclick="appFit(1)">
+            <input id="appneo-fit-button" class="appneo-button" type="button" value="← FIT →" title="画面いっぱいの作業モードにする" aria-pressed="false" onclick="appFit()">
           </fieldset>
           <fieldset>
             <legend>TOOL</legend>
@@ -774,6 +825,47 @@
           max-width: 190px;
           text-align: center;
           font-size: 12px;
+        }
+        #${APPNEO_ID}.appneo-expanded {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          box-sizing: border-box;
+          width: auto !important;
+          height: auto;
+          max-width: none;
+          margin: 0 !important;
+          padding: 8px;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          background: #f4f4f4;
+          color: #222;
+          overflow: hidden;
+        }
+        #${APPNEO_ID}.appneo-expanded > p {
+          margin: 0 0 8px;
+        }
+        #${APPNEO_ID}.appneo-expanded .appneo-container {
+          min-width: 0;
+          min-height: 0;
+          align-items: stretch !important;
+        }
+        #${APPNEO_ID}.appneo-expanded .appneo-stage {
+          flex: 1 1 0 !important;
+          min-width: 0;
+          min-height: 0;
+          overflow: auto;
+          overscroll-behavior: contain;
+        }
+        #${APPNEO_ID}.appneo-expanded .appneo-palette {
+          width: 190px;
+          max-width: 40vw;
+          min-height: 0;
+          overflow: auto;
+          overscroll-behavior: contain;
+        }
+        #${APPNEO_ID} #appneo-status:empty {
+          display: none;
         }
         #${APPNEO_ID} fieldset {
           margin: 0 0 6px;
