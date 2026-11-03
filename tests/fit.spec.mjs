@@ -69,3 +69,59 @@ test("FIT keeps the drawing viewport consistent without changing the artwork or 
   );
   await expectConsistentViewport();
 });
+
+for (const zoom of [1, 1.25, 1.5]) {
+  test(`FIT layout settles with classic scrollbars at ${zoom}x page scale`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/appneoLocalTest/");
+    await page.evaluate((scale) => {
+      document.documentElement.style.zoom = String(scale);
+    }, zoom);
+    await page.locator("#start-appneo").click();
+    await expect(page.locator("#appneo-status")).toBeEmpty({ timeout: 60000 });
+
+    const expectStableLayout = async (fits) => {
+      const frames = await page.evaluate(async () => {
+        const stage = document.getElementById("appneo-applet");
+        const container = document.getElementById("neo-container");
+        const frames = [];
+        for (let i = 0; i < 30; i++) {
+          await new Promise(requestAnimationFrame);
+          frames.push({
+            width: stage.clientWidth,
+            height: stage.clientHeight,
+            scrollWidth: stage.scrollWidth,
+            scrollHeight: stage.scrollHeight,
+            appletWidth: container.style.width,
+            appletHeight: container.style.height,
+          });
+        }
+        return frames.slice(10);
+      });
+      expect(new Set(frames.map((frame) => JSON.stringify(frame))).size).toBe(
+        1,
+      );
+      const last = frames.at(-1);
+      if (fits) {
+        expect(last.scrollWidth).toBe(last.width);
+        expect(last.scrollHeight).toBe(last.height);
+      } else {
+        expect(
+          last.scrollWidth > last.width || last.scrollHeight > last.height,
+        ).toBe(true);
+      }
+    };
+
+    await page.locator("#appneo-fit-button").click();
+    await expectStableLayout(true);
+    await page.setViewportSize({ width: 480, height: 400 });
+    await expectStableLayout(false);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expectStableLayout(true);
+    await page.keyboard.press("Escape");
+    await page.locator("#appneo-fit-button").click();
+    await expectStableLayout(true);
+  });
+}
