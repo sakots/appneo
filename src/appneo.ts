@@ -15,7 +15,7 @@ interface Document {
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.3.0";
+  const APPNEO_VERSION = "v0.3.1";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
@@ -352,7 +352,34 @@ interface Document {
     }
 
     resizeCanvas() {
-      if (window.Neo && Neo.painter) Neo.resizeCanvas();
+      if (!window.Neo || !Neo.painter) return;
+      Neo.resizeCanvas();
+
+      // NEO's resizeCanvas and setZoom can calculate different viewport sizes.
+      // Use the painter's final dimensions for both the buffer and its DOM box.
+      const painter = Neo.painter;
+      const canvas: HTMLCanvasElement = painter.destCanvas;
+      if (
+        canvas.width === painter.destWidth &&
+        canvas.height === painter.destHeight
+      )
+        return;
+      const smoothing = painter.destCanvasCtx.imageSmoothingEnabled;
+      const quality = painter.destCanvasCtx.imageSmoothingQuality;
+      canvas.width = painter.destWidth;
+      canvas.height = painter.destHeight;
+      painter.destCanvasCtx.imageSmoothingEnabled = smoothing;
+      painter.destCanvasCtx.imageSmoothingQuality = quality;
+      Neo.canvas.style.width = `${painter.destWidth}px`;
+      Neo.canvas.style.height = `${painter.destHeight}px`;
+      painter.setZoomPosition(painter.zoomX, painter.zoomY);
+      painter.updateDestCanvas(
+        0,
+        0,
+        painter.canvasWidth,
+        painter.canvasHeight,
+        false,
+      );
     }
 
     resizeToStage = () => {
