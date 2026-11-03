@@ -1,7 +1,7 @@
 "use strict";
 (() => {
   "use strict";
-  const APPNEO_VERSION = "v0.3.2";
+  const APPNEO_VERSION = "v0.3.3";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
   const APPNEO_ID = "appneo-root";
   const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
@@ -895,6 +895,10 @@
         #${APPNEO_ID}.appneo-expanded #neo-pageView {
           /* The bordered container is wider than pageView; auto margins cause overflow. */
           margin: 0 !important;
+        }
+        #${APPNEO_ID}.appneo-expanded #neo-toolsWrapper {
+          /* NEO's -3px right offset can overflow when the zoomed canvas fills the stage. */
+          right: 0;
         }
         #${APPNEO_ID}.appneo-expanded .appneo-palette {
           width: 190px;

@@ -71,7 +71,7 @@ test("FIT keeps the drawing viewport consistent without changing the artwork or 
 });
 
 for (const zoom of [1, 1.25, 1.5]) {
-  test(`FIT layout settles with classic scrollbars at ${zoom}x page scale`, async ({
+  test(`FIT layout settles with a zoomed canvas and classic scrollbars at ${zoom}x page scale`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -81,6 +81,9 @@ for (const zoom of [1, 1.25, 1.5]) {
     }, zoom);
     await page.locator("#start-appneo").click();
     await expect(page.locator("#appneo-status")).toBeEmpty({ timeout: 60000 });
+    for (let i = 0; i < 4; i++) {
+      await page.locator("#neo-zoomPlus").click();
+    }
 
     const expectStableLayout = async (fits) => {
       const frames = await page.evaluate(async () => {
@@ -97,6 +100,15 @@ for (const zoom of [1, 1.25, 1.5]) {
             appletWidth: container.style.width,
             appletHeight: container.style.height,
           });
+          const stageBounds = stage.getBoundingClientRect();
+          const toolsBounds = document
+            .getElementById("neo-toolsWrapper")
+            .getBoundingClientRect();
+          frames.at(-1).toolsWithinStage =
+            toolsBounds.left >= stageBounds.left &&
+            toolsBounds.right <= stageBounds.right &&
+            toolsBounds.top >= stageBounds.top &&
+            toolsBounds.bottom <= stageBounds.bottom;
         }
         return frames.slice(10);
       });
@@ -107,6 +119,7 @@ for (const zoom of [1, 1.25, 1.5]) {
       if (fits) {
         expect(last.scrollWidth).toBe(last.width);
         expect(last.scrollHeight).toBe(last.height);
+        expect(last.toolsWithinStage).toBe(true);
       } else {
         expect(
           last.scrollWidth > last.width || last.scrollHeight > last.height,
@@ -115,6 +128,10 @@ for (const zoom of [1, 1.25, 1.5]) {
     };
 
     await page.locator("#appneo-fit-button").click();
+    await expectStableLayout(true);
+    await page.locator('input[value="Left"]').click();
+    await expectStableLayout(true);
+    await page.locator('input[value="Right"]').click();
     await expectStableLayout(true);
     await page.setViewportSize({ width: 480, height: 400 });
     await expectStableLayout(false);
