@@ -97,8 +97,8 @@ for (const zoom of [1, 1.25, 1.5]) {
             height: stage.clientHeight,
             scrollWidth: stage.scrollWidth,
             scrollHeight: stage.scrollHeight,
-            appletWidth: container.style.width,
-            appletHeight: container.style.height,
+            appletWidth: container.clientWidth,
+            appletHeight: container.clientHeight,
           });
           const stageBounds = stage.getBoundingClientRect();
           const toolsBounds = document
@@ -142,3 +142,63 @@ for (const zoom of [1, 1.25, 1.5]) {
     await expectStableLayout(true);
   });
 }
+
+test("NEO window maximizes before, during, and after FIT without losing the artwork", async ({
+  page,
+}) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/appneoLocalTest/");
+  await page.locator("#start-appneo").click();
+  await expect(page.locator("#appneo-status")).toBeEmpty({ timeout: 60000 });
+  const originalImage = await page.evaluate(() => {
+    const painter = window.Neo.painter;
+    painter.canvasCtx[0].fillStyle = "#ff0000";
+    painter.canvasCtx[0].fillRect(120, 120, 20, 20);
+    painter.updateDestCanvas(
+      0,
+      0,
+      painter.canvasWidth,
+      painter.canvasHeight,
+      false,
+    );
+    return painter.getImage().toDataURL();
+  });
+  const appletSize = () =>
+    page
+      .locator("#neo-container")
+      .evaluate((element) => [element.clientWidth, element.clientHeight]);
+  const originalSize = await appletSize();
+  const expectMaximized = async () => {
+    await expect(page.locator("#neo-windowView")).toBeVisible();
+    expect(await appletSize()).toEqual(
+      await page
+        .locator("#neo-windowView")
+        .evaluate((element) => [element.clientWidth, element.clientHeight]),
+    );
+    expect(
+      await page.evaluate(() => window.Neo.painter.getImage().toDataURL()),
+    ).toBe(originalImage);
+  };
+
+  await page.locator("#neo-window").click();
+  await expectMaximized();
+  await page.locator("#neo-window").click();
+  expect(await appletSize()).toEqual(originalSize);
+
+  await page.locator("#appneo-fit-button").click();
+  const fitSize = await appletSize();
+  await page.locator("#neo-window").click();
+  await expectMaximized();
+  await page.locator("#neo-window").click();
+  expect(await appletSize()).toEqual(fitSize);
+
+  await page.locator("#appneo-fit-button").click();
+  expect(await appletSize()).toEqual(originalSize);
+  await page.locator("#neo-window").click();
+  await expectMaximized();
+  await page.locator("#neo-window").click();
+  expect(await appletSize()).toEqual(originalSize);
+  expect(
+    await page.evaluate(() => window.Neo.painter.getImage().toDataURL()),
+  ).toBe(originalImage);
+});

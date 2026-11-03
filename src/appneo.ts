@@ -15,7 +15,7 @@ interface Document {
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.3.3";
+  const APPNEO_VERSION = "v0.3.4";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
@@ -342,12 +342,11 @@ interface Document {
         Neo.config.applet_height = height;
       }
 
-      for (const id of ["neo-pageView", "neo-container"]) {
-        const element = document.getElementById(id);
-        if (element) {
-          element.style.width = `${width}px`;
-          element.style.height = `${height}px`;
-        }
+      // Keep the painter relative to its parent so NEO's window view can fill the viewport.
+      const pageView = document.getElementById("neo-pageView");
+      if (pageView) {
+        pageView.style.width = `${width}px`;
+        pageView.style.height = `${height}px`;
       }
     }
 
@@ -386,7 +385,8 @@ interface Document {
       this.resizeFrame = 0;
       if (!this.isExpanded) return;
       const container = document.getElementById("neo-container");
-      if (!container) return;
+      const pageView = document.getElementById("neo-pageView");
+      if (!container || !pageView) return;
 
       // Measure the content box and fractional borders before rounding down.
       // Integer offset/client sizes can otherwise make the container overflow at browser zoom.
@@ -409,8 +409,8 @@ interface Document {
         ),
       );
       if (
-        container.style.width === `${width}px` &&
-        container.style.height === `${height}px`
+        pageView.style.width === `${width}px` &&
+        pageView.style.height === `${height}px`
       )
         return;
       this.setAppletSize(width, height);
