@@ -26,6 +26,7 @@ window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
 - `← FIT →` を押すと、編集画面をブラウザーの表示領域いっぱいに固定表示します。ブラウザー自体の全画面表示には切り替えません。
 - ウィンドウサイズの変更に追従します。パレットは描画側とは独立してスクロールできます。
 - 描画内容とズーム倍率は維持します。キャンバスの画像サイズは変更しません。
+- FIT切り替え・リサイズ後も、表示用canvasの寸法をNEOの描画領域と一致させ、拡大表示時の表示ずれを防ぎます。
 - `FIT解除` または `Esc` で元の配置・編集画面サイズ・ページのスクロール位置に戻ります。
 - 狭い画面では操作部を潰さないよう、NEOの編集画面を最低400×460pxに保ち、描画側の領域内でスクロールできるようにします。
 
@@ -34,12 +35,20 @@ window.APPNEO_NEO_BASE = "https://example.com/path/to/neo/";
 ```sh
 pnpm install
 pnpm run typecheck
+pnpm exec playwright install chromium
+pnpm test
 pnpm run build
 ```
 
 `src/appneo.ts` を編集し、`pnpm run build` で配布用の `appneo.js` と `bookmarklet-loader.txt` を更新します。
 
+`pnpm test` はローカル確認ページをChromiumで開き、FIT・ウィンドウ縮小・Esc解除時の表示寸法、描画内容、ズーム倍率を検証します。PaintBBS NEOの読み込みにネットワーク接続が必要です。
+
 ## 履歴
+
+### [2026/11/03] v0.3.1
+
+- FIT切り替え・リサイズ時に表示用canvasと描画領域の寸法がずれる問題を修正
 
 ### [2026/11/02] v0.3.0
 
