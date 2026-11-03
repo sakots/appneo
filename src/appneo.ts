@@ -15,7 +15,7 @@ interface Document {
 (() => {
   "use strict";
 
-  const APPNEO_VERSION = "v0.3.1";
+  const APPNEO_VERSION = "v0.3.2";
   const APPNEO_CACHE_BUST = Date.now().toString(36);
 
   const APPNEO_ID = "appneo-root";
@@ -388,16 +388,25 @@ interface Document {
       const container = document.getElementById("neo-container");
       if (!container) return;
 
-      // Keep NEO's controls usable; smaller viewports scroll inside the stage.
+      // Measure the content box and fractional borders before rounding down.
+      // Integer offset/client sizes can otherwise make the container overflow at browser zoom.
+      const stageStyle = getComputedStyle(this.stage);
+      const containerStyle = getComputedStyle(container);
       const width = Math.max(
         DEFAULT_APPLET_WIDTH,
-        this.stage.clientWidth -
-          (container.offsetWidth - container.clientWidth),
+        Math.floor(
+          parseFloat(stageStyle.width) -
+            parseFloat(containerStyle.borderLeftWidth) -
+            parseFloat(containerStyle.borderRightWidth),
+        ),
       );
       const height = Math.max(
         DEFAULT_APPLET_HEIGHT,
-        this.stage.clientHeight -
-          (container.offsetHeight - container.clientHeight),
+        Math.floor(
+          parseFloat(stageStyle.height) -
+            parseFloat(containerStyle.borderTopWidth) -
+            parseFloat(containerStyle.borderBottomWidth),
+        ),
       );
       if (
         container.style.width === `${width}px` &&
@@ -1056,6 +1065,10 @@ interface Document {
           min-height: 0;
           overflow: auto;
           overscroll-behavior: contain;
+        }
+        #${APPNEO_ID}.appneo-expanded #neo-pageView {
+          /* The bordered container is wider than pageView; auto margins cause overflow. */
+          margin: 0 !important;
         }
         #${APPNEO_ID}.appneo-expanded .appneo-palette {
           width: 190px;
